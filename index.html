@@ -765,7 +765,7 @@ function applyStatus(key, status, cell) {
     prevData[key] = 'none'; // clear stripe when not dispatched
   }
   data[key] = status;
-  lockedKeys.set(key, Date.now() + 5000); // lock for 5s
+  lockedKeys.set(key, Date.now() + 8000); // lock for 8s — covers save round-trip + sheet propagation
   if (!cell) cell = document.querySelector('[data-key="' + key + '"]');
   if (cell) {
     cell.className = 'cell ' + (CLS[status]||'pending');
@@ -900,11 +900,12 @@ async function pushUpdate(key, status) {
     const json = await res.json();
     if (json.ok) {
       setSync('ok','Saved');
-      lockedKeys.delete(key); // saved — unlock immediately so poll can confirm
+      // Keep lock for 3 more seconds so sheet has time to propagate before poll reads it
+      lockedKeys.set(key, Date.now() + 3000);
     } else { throw new Error(json.error); }
   } catch(err) {
     setSync('error','Save failed');
-    lockedKeys.delete(key); // unlock on error too
+    lockedKeys.delete(key); // unlock on error so user can retry
   }
   finally { saving = false; }
 }
