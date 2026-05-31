@@ -3,816 +3,924 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bulletin Board</title>
+<title>South &amp; West Hub Bulletins</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --status-pending:    #CC2200;
-    --status-ready:      #1A7A2E;
-    --status-redispatch: #0A3D8F;
-    --status-dispatched: #1A1A1A;
-    --status-breaking:   #B8860B;
-    --pending-text:      #FF6B50;
-    --ready-text:        #4ADE80;
-    --redispatch-text:   #60A5FA;
-    --dispatched-text:   #888888;
-    --breaking-text:     #FFD700;
-    --bg:                #0D0D0D;
-    --surface:           #161616;
-    --border:            #2A2A2A;
-    --header-bg:         #111111;
-    --text-primary:      #F0F0F0;
-    --text-muted:        #666;
-    --accent:            #C8AA6E;
-  }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --pending:    #CC1100;
+  --ready:      #1A6B28;
+  --redispatch: #0A3580;
+  --dispatched: #1A1A1A;
+  --breaking:   #A07800;
+}
 
-  body {
-    background: var(--bg);
-    font-family: 'Barlow', sans-serif;
-    color: var(--text-primary);
-    min-height: 100vh;
-    padding: 0;
-  }
+body {
+  background: #f0f0f0;
+  font-family: 'DM Sans', sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
-  /* TOP BAR */
-  .topbar {
-    background: var(--header-bg);
-    border-bottom: 1px solid var(--border);
-    padding: 12px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
+/* ── TOPBAR ─────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  height: 56px;
+  background: #1a1a2e;
+  flex-shrink: 0;
+}
 
-  .topbar-left {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
-  .logo-block {
-    display: flex;
-    flex-direction: column;
-    line-height: 1;
-  }
+.hub-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
 
-  .logo-label {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--accent);
-  }
+.hub-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: #fff;
+  line-height: 1;
+}
 
-  .logo-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 28px;
-    font-weight: 800;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--text-primary);
-  }
+.hub-sub {
+  font-family: 'Outfit', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #7B8CDE;
+  margin-top: 2px;
+}
 
-  .shift-toggle {
-    display: flex;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    overflow: hidden;
-  }
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
 
-  .shift-btn {
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    padding: 6px 16px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
+.shift-toggle {
+  display: flex;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 4px;
+  overflow: hidden;
+}
 
-  .shift-btn.active {
-    background: var(--accent);
-    color: #111;
-  }
+.shift-btn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
 
-  .topbar-right {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
+.shift-btn.active { background: #4700A3; color: #fff; }
 
-  .clock {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 32px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    color: var(--accent);
-    min-width: 90px;
-    text-align: right;
-  }
+.mode-toggle {
+  display: flex;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.mode-btn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.mode-btn.active { background: #006644; color: #fff; }
 
-  .sync-status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--text-muted);
-    font-family: 'Barlow Condensed', sans-serif;
-    letter-spacing: 0.5px;
-  }
+.countdown-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
 
-  .sync-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--ready-text);
-    transition: background 0.3s;
-  }
+.countdown-label {
+  font-family: 'Outfit', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+}
 
-  .sync-dot.syncing { background: var(--breaking-text); animation: pulse 0.8s infinite; }
-  .sync-dot.error   { background: var(--pending-text); }
+.countdown-val {
+  font-family: 'Outfit', sans-serif;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
 
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.countdown-val.ok     { color: #1FD1BD; }
+.countdown-val.soon   { color: #FFAA00; }
+.countdown-val.urgent { color: #FF3300; animation: urgentPulse 0.5s ease-in-out infinite; }
+@keyframes urgentPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-  /* CONFIG BANNER */
-  .config-banner {
-    background: #1A1200;
-    border-bottom: 1px solid #3A2800;
-    padding: 10px 24px;
-    font-size: 13px;
-    color: #B8860B;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
+.clock {
+  font-family: 'Outfit', sans-serif;
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #fff;
+}
 
-  .config-banner input {
-    background: #0D0D0D;
-    border: 1px solid #3A2800;
-    color: #FFD700;
-    font-family: 'Barlow', sans-serif;
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 3px;
-    width: 420px;
-  }
+.sync-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: rgba(255,255,255,0.3);
+}
 
-  .config-banner button {
-    background: #3A2800;
-    border: 1px solid #6A4800;
-    color: #FFD700;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
-    font-size: 13px;
-    letter-spacing: 1px;
-    padding: 4px 14px;
-    border-radius: 3px;
-    cursor: pointer;
-    text-transform: uppercase;
-  }
+.topbar-reset {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.55);
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.topbar-reset:hover { background: rgba(255,255,255,0.13); color: #fff; }
 
-  /* LEGEND */
-  .legend {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    padding: 10px 24px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    flex-wrap: wrap;
-  }
+.sync-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #1FD1BD; flex-shrink: 0;
+}
+.sync-dot.syncing { background: #FFAA00; animation: blink 0.6s infinite; }
+.sync-dot.error   { background: #FF3300; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
-  .legend-label {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-right: 4px;
-  }
+/* ── GRID ───────────────────────────────────── */
+.grid-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  gap: 4px;
+  overflow: hidden;
+}
 
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
+.grid-row {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  min-height: 0;
+}
 
-  .legend-swatch {
-    width: 28px;
-    height: 14px;
-    border-radius: 2px;
-  }
+/* Region label — grey box like the original */
+.region-lbl {
+  width: 160px;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2a2a2a;
+  border-radius: 4px;
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(18px, 2.2vw, 36px);
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #fff;
+  text-align: center;
+  padding: 0 8px;
+}
 
-  .legend-item.pending  .legend-swatch { background: var(--status-pending); }
-  .legend-item.ready    .legend-swatch { background: var(--status-ready); }
-  .legend-item.redispatch .legend-swatch { background: var(--status-redispatch); }
-  .legend-item.dispatched .legend-swatch { background: var(--status-dispatched); border: 1px solid #333; }
-  .legend-item.breaking .legend-swatch { background: var(--status-breaking); }
+.nation-badge {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  color: #ff3b30;
+  line-height: 1;
+  pointer-events: none;
+}
 
-  .legend-item.pending    { color: var(--pending-text); }
-  .legend-item.ready      { color: var(--ready-text); }
-  .legend-item.redispatch { color: var(--redispatch-text); }
-  .legend-item.dispatched { color: var(--dispatched-text); }
-  .legend-item.breaking   { color: var(--breaking-text); }
+/* ── BULLETIN CELL ──────────────────────────── */
+.cell {
+  flex: 1;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: filter 0.1s, transform 0.08s;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+}
 
-  .legend-spacer { flex: 1; }
+.cell:hover  { filter: brightness(1.2); transform: scale(1.02); }
+.cell:active { transform: scale(0.97); }
 
-  .reset-btn {
-    background: none;
-    border: 1px solid #333;
-    color: var(--text-muted);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
-    font-size: 12px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    padding: 5px 16px;
-    border-radius: 3px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
+.cell.pending    { background: var(--pending); }
+.cell.ready      { background: var(--ready); }
+.cell.redispatch { background: var(--redispatch); }
+.cell.dispatched { background: var(--dispatched); }
+.cell.breaking   { background: var(--breaking); }
 
-  .reset-btn:hover { border-color: #555; color: var(--text-primary); }
+.cell.breaking {
+  animation: breakingPulse 1.2s ease-in-out infinite;
+}
+@keyframes breakingPulse {
+  0%,100% { filter: brightness(1); }
+  50%      { filter: brightness(1.45); }
+}
 
-  /* MAIN GRID */
-  .grid-wrapper {
-    padding: 20px 24px;
-    overflow-x: auto;
-  }
+.cell.saving::before {
+  content:''; position:absolute; inset:0;
+  background: rgba(255,255,255,0.1);
+  animation: savePulse 0.4s ease-in-out infinite;
+}
+@keyframes savePulse { 0%,100%{opacity:0} 50%{opacity:1} }
 
-  .bulletin-grid {
-    display: grid;
-    grid-template-columns: 160px repeat(var(--slot-count, 6), 1fr);
-    gap: 3px;
-    min-width: 700px;
-  }
+/* Note curl indicator */
+.note-curl {
+  position: absolute;
+  top: 0; right: 0;
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 0 20px 20px 0;
+  border-color: transparent #2a2a2a transparent transparent;
+  cursor: pointer;
+  transition: border-width 0.15s;
+  z-index: 2;
+}
+.note-curl:hover { border-width: 0 26px 26px 0; }
 
-  /* HEADER ROW */
-  .grid-corner {
-    background: transparent;
-  }
+/* Note modal overlay */
+.note-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.note-modal-overlay.show { display: flex; }
 
-  .slot-header {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 3px;
-    padding: 8px 6px;
-    text-align: center;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-  }
+.note-modal {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  box-shadow: 0 16px 60px rgba(0,0,0,0.7);
+  padding: 20px;
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
-  /* REGION LABEL */
-  .region-label {
-    display: flex;
-    align-items: center;
-    padding-right: 12px;
-  }
+.note-modal-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: #888;
+}
 
-  .region-name {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 18px;
-    font-weight: 800;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--text-primary);
-    line-height: 1;
-  }
+.note-modal-region {
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  margin-top: -4px;
+}
 
-  /* BULLETIN CELL */
-  .bulletin-cell {
-    border-radius: 3px;
-    padding: 10px 12px;
-    cursor: pointer;
-    transition: filter 0.1s, transform 0.08s;
-    position: relative;
-    overflow: hidden;
-    user-select: none;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    min-height: 64px;
-  }
+.note-modal textarea {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 5px;
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  padding: 10px 12px;
+  resize: vertical;
+  min-height: 90px;
+  outline: none;
+}
+.note-modal textarea:focus { border-color: #555; }
 
-  .bulletin-cell:hover { filter: brightness(1.2); transform: scale(1.01); }
-  .bulletin-cell:active { transform: scale(0.98); }
+.note-modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
 
-  .bulletin-cell.pending    { background: var(--status-pending); }
-  .bulletin-cell.ready      { background: var(--status-ready); }
-  .bulletin-cell.redispatch { background: var(--status-redispatch); }
-  .bulletin-cell.dispatched { background: var(--status-dispatched); border: 1px solid #2A2A2A; }
-  .bulletin-cell.breaking   { background: var(--status-breaking); }
+.note-btn {
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  padding: 7px 18px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+}
+.note-btn.save   { background: #4700A3; color: #fff; }
+.note-btn.clear  { background: #2a2a2a; color: #aaa; }
+.note-btn.cancel { background: transparent; color: #666; border: 1px solid #333; }
 
-  /* BREAKING: pulsing glow */
-  .bulletin-cell.breaking::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(255,215,0,0.12);
-    animation: breakingGlow 1.2s ease-in-out infinite;
-    pointer-events: none;
-  }
+.cell-time {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(22px, 3.5vw, 52px);
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: rgba(255,255,255,0.95);
+  line-height: 1;
+}
 
-  @keyframes breakingGlow { 0%,100%{opacity:0} 50%{opacity:1} }
+.cell-status {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(13px, 1.8vw, 26px);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.6);
+  margin-top: 4px;
+  line-height: 1;
+}
 
-  .cell-time {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 20px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    line-height: 1;
-    color: rgba(255,255,255,0.9);
-  }
+.cell.breaking .cell-time,
+.cell.breaking .cell-status { color: rgba(0,0,0,0.75); }
 
-  .cell-status {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.6);
-    margin-top: 3px;
-  }
+/* Previous-state stripe on dispatched cells */
+.cell .prev-stripe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  border-radius: 4px 0 0 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.cell.dispatched .prev-stripe { opacity: 1; }
+.prev-stripe.pending    { background: var(--pending); }
+.prev-stripe.ready      { background: var(--ready); }
+.prev-stripe.redispatch { background: var(--redispatch); }
+.prev-stripe.breaking   { background: var(--breaking); }
+.prev-stripe.none       { opacity: 0 !important; }
 
-  .bulletin-cell.breaking .cell-time,
-  .bulletin-cell.breaking .cell-status { color: rgba(0,0,0,0.85); }
+.help-section {
+  border-top: 1px solid #2a2a2a;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
 
-  /* SAVING OVERLAY */
-  .bulletin-cell.saving::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(255,255,255,0.06);
-    animation: savePulse 0.5s ease-in-out infinite;
-  }
+.help-heading {
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #666;
+}
 
-  @keyframes savePulse { 0%,100%{opacity:0} 50%{opacity:1} }
+.help-row {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: #bbb;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.5;
+}
 
-  /* CONTEXT MENU */
-  .context-menu {
-    position: fixed;
-    background: #1C1C1C;
-    border: 1px solid #333;
-    border-radius: 6px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-    z-index: 999;
-    overflow: hidden;
-    min-width: 180px;
-    display: none;
-  }
+.help-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
 
-  .context-menu.visible { display: block; }
+.help-badge {
+  font-family: 'Outfit', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
 
-  .context-menu-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    padding: 10px 14px 6px;
-    border-bottom: 1px solid #2A2A2A;
-  }
+/* ── CONTEXT MENU ───────────────────────────── */
+.ctx {
+  position: fixed;
+  background: #1A1A1A;
+  border: 1px solid #333;
+  border-radius: 6px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  z-index: 999;
+  min-width: 190px;
+  display: none;
+  overflow: hidden;
+}
+.ctx.show { display: block; }
 
-  .context-option {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    cursor: pointer;
-    transition: background 0.1s;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
+.ctx-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.5px; text-transform: uppercase;
+  color: #555;
+  padding: 10px 14px 7px;
+  border-bottom: 1px solid #262626;
+}
 
-  .context-option:hover { background: #2A2A2A; }
+.ctx-opt {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 14px; cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px; font-weight: 700;
+  letter-spacing: 0.2px; text-transform: uppercase;
+  transition: background 0.1s;
+}
+.ctx-opt:hover { background: #252525; }
+.ctx-sw { width:12px; height:12px; border-radius:2px; flex-shrink:0; }
 
-  .context-swatch {
-    width: 12px;
-    height: 12px;
-    border-radius: 2px;
-    flex-shrink: 0;
-  }
-
-  .context-option.pending    .context-swatch { background: var(--status-pending); }
-  .context-option.ready      .context-swatch { background: var(--status-ready); }
-  .context-option.redispatch .context-swatch { background: var(--status-redispatch); }
-  .context-option.dispatched .context-swatch { background: #444; border: 1px solid #555; }
-  .context-option.breaking   .context-swatch { background: var(--status-breaking); }
-
-  .context-option.pending    { color: var(--pending-text); }
-  .context-option.ready      { color: var(--ready-text); }
-  .context-option.redispatch { color: var(--redispatch-text); }
-  .context-option.dispatched { color: var(--dispatched-text); }
-  .context-option.breaking   { color: var(--breaking-text); }
-
-  /* LOADING */
-  .loading-screen {
-    position: fixed;
-    inset: 0;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    z-index: 200;
-  }
-
-  .loading-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 32px;
-    font-weight: 800;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    color: var(--accent);
-  }
-
-  .loading-bar {
-    width: 200px;
-    height: 2px;
-    background: #222;
-    border-radius: 1px;
-    overflow: hidden;
-  }
-
-  .loading-fill {
-    height: 100%;
-    background: var(--accent);
-    animation: loadFill 1.5s ease-in-out infinite;
-  }
-
-  @keyframes loadFill { 0%{width:0%} 60%{width:90%} 100%{width:100%} }
-
-  .error-msg {
-    color: var(--pending-text);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 14px;
-    max-width: 500px;
-    text-align: center;
-    letter-spacing: 0.5px;
-  }
+.ctx-opt.pending    { color: #FF6B50; } .ctx-opt.pending    .ctx-sw { background: var(--pending); }
+.ctx-opt.ready      { color: #4ADE80; } .ctx-opt.ready      .ctx-sw { background: var(--ready); }
+.ctx-opt.redispatch { color: #60A5FA; } .ctx-opt.redispatch .ctx-sw { background: var(--redispatch); }
+.ctx-opt.dispatched { color: #888;    } .ctx-opt.dispatched .ctx-sw { background: #444; border:1px solid #555; }
+.ctx-opt.breaking   { color: #FFD700; } .ctx-opt.breaking   .ctx-sw { background: var(--breaking); }
 </style>
 </head>
 <body>
 
-<!-- LOADING SCREEN -->
-<div class="loading-screen" id="loadingScreen">
-  <div class="loading-title">Bulletin Board</div>
-  <div class="loading-bar"><div class="loading-fill"></div></div>
-  <div class="error-msg" id="loadingMsg">Connecting to data source…</div>
-</div>
-
-<!-- TOP BAR -->
 <div class="topbar">
   <div class="topbar-left">
-    <div class="logo-block">
-      <span class="logo-label">South &amp; West Hub</span>
-      <span class="logo-title">Bulletins</span>
+    <div class="hub-block">
+      <div class="hub-name">South &amp; West Hub</div>
+      <div class="hub-sub">Bulletin Tracker</div>
     </div>
     <div class="shift-toggle">
-      <button class="shift-btn active" id="btnAM" onclick="setShift('AM')">AM</button>
-      <button class="shift-btn" id="btnPM" onclick="setShift('PM')">PM</button>
+      <button class="shift-btn" id="btnAM" onclick="setShift('AM')">AM</button>
+      <button class="shift-btn active" id="btnPM" onclick="setShift('PM')">PM</button>
     </div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btnCreation" onclick="setMode('creation')">CRE</button>
+      <button class="mode-btn" id="btnDelivery" onclick="setMode('delivery')">DEL</button>
+    </div>
+    <button class="topbar-reset" onclick="confirmReset()">&#8635; Reset</button>
+    <button class="topbar-reset" onclick="openHelp()" style="letter-spacing:0.2px;">? Help</button>
   </div>
   <div class="topbar-right">
-    <div class="sync-status">
-      <div class="sync-dot" id="syncDot"></div>
-      <span id="syncLabel">Loading…</span>
+    <div class="countdown-wrap">
+      <div class="countdown-label">Next :50 in</div>
+      <div class="countdown-val ok" id="countdown">0:00</div>
     </div>
     <div class="clock" id="clock">00:00</div>
+    <div class="sync-pill">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncLabel">Connecting</span>
+    </div>
   </div>
 </div>
 
-<!-- CONFIG BANNER (shown until URL is saved) -->
-<div class="config-banner" id="configBanner" style="display:none">
-  ⚙ Paste your Google Apps Script Web App URL:
-  <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec" />
-  <button onclick="saveUrl()">Save &amp; Connect</button>
+<div class="grid-wrap" id="gridWrap"></div>
+
+<div class="ctx" id="ctx">
+  <div class="ctx-title" id="ctxTitle">Set status</div>
+  <div class="ctx-opt pending"    onclick="setStatus('PENDING')">   <div class="ctx-sw"></div>Pending</div>
+  <div class="ctx-opt ready"      onclick="setStatus('READY')">     <div class="ctx-sw"></div>Ready</div>
+  <div class="ctx-opt redispatch" onclick="setStatus('REDISPATCH')"><div class="ctx-sw"></div>Redispatch</div>
+  <div class="ctx-opt dispatched" onclick="setStatus('DISPATCHED')"><div class="ctx-sw"></div>Dispatched</div>
+  <div class="ctx-opt breaking"   onclick="setStatus('BREAKING')">  <div class="ctx-sw"></div>Breaking</div>
+  <div style="border-top:1px solid #262626; margin: 4px 0;"></div>
+  <div class="ctx-opt" style="color:#ccc;" onclick="openNoteFromCtx()"><div class="ctx-sw" style="background:#444;border:1px solid #666;"></div>Add / Edit Note</div>
 </div>
 
-<!-- LEGEND -->
-<div class="legend">
-  <span class="legend-label">Status:</span>
-  <div class="legend-item pending">  <div class="legend-swatch"></div>Pending</div>
-  <div class="legend-item ready">    <div class="legend-swatch"></div>Ready</div>
-  <div class="legend-item redispatch"><div class="legend-swatch"></div>Redispatch</div>
-  <div class="legend-item dispatched"><div class="legend-swatch"></div>Dispatched</div>
-  <div class="legend-item breaking"> <div class="legend-swatch"></div>Breaking</div>
-  <div class="legend-spacer"></div>
-  <button class="reset-btn" onclick="confirmReset()">↺ Reset to Pending</button>
+<!-- Help modal -->
+<div class="note-modal-overlay" id="helpOverlay" onclick="if(event.target===this)closeHelp()">
+  <div class="note-modal" style="width:480px;max-height:80vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="note-modal-title" style="font-size:15px;color:#fff;">How to use the Bulletin Tracker</div>
+      <button onclick="closeHelp()" style="background:none;border:none;color:#666;font-size:20px;cursor:pointer;line-height:1;">&times;</button>
+    </div>
+
+    <div class="help-section">
+      <div class="help-heading">Bulletin statuses</div>
+      <div class="help-row"><span class="help-swatch" style="background:#CC1100;"></span><span><strong>Pending</strong> — Bulletin not yet started</span></div>
+      <div class="help-row"><span class="help-swatch" style="background:#1A6B28;"></span><span><strong>Ready</strong> — Written and ready to go</span></div>
+      <div class="help-row"><span class="help-swatch" style="background:#0A3580;"></span><span><strong>Redispatch</strong> — Being sent again with updates</span></div>
+      <div class="help-row"><span class="help-swatch" style="background:#1A1A1A;border:1px solid #444;"></span><span><strong>Dispatched</strong> — Sent. A coloured stripe on the left shows the previous state</span></div>
+      <div class="help-row"><span class="help-swatch" style="background:#A07800;"></span><span><strong>Breaking</strong> — Breaking news bulletin, pulses to draw attention</span></div>
+    </div>
+
+    <div class="help-section">
+      <div class="help-heading">Clicking</div>
+      <div class="help-row">&#x1F5B1; <span><strong>Left click</strong> — Cycles through statuses (in Creation mode), or instantly Dispatches (in Delivery mode)</span></div>
+      <div class="help-row">&#x1F5B1; <span><strong>Right click</strong> — Opens a menu to jump to any status directly, or add/edit a note</span></div>
+    </div>
+
+    <div class="help-section">
+      <div class="help-heading">Modes (CRE / DEL)</div>
+      <div class="help-row"><span class="help-badge" style="background:#006644;">CRE</span><span><strong>Creation</strong> — Left click cycles all statuses. For journalists building bulletins</span></div>
+      <div class="help-row"><span class="help-badge" style="background:#4700A3;">DEL</span><span><strong>Delivery</strong> — Left click goes straight to Dispatched. For presenters sending bulletins</span></div>
+    </div>
+
+    <div class="help-section">
+      <div class="help-heading">AM / PM</div>
+      <div class="help-row">Switches between the morning shift (0600–1300) and afternoon shift (1400–1900)</div>
+    </div>
+
+    <div class="help-section">
+      <div class="help-heading">Notes</div>
+      <div class="help-row">Right-click any bulletin and choose <em>Add / Edit Note</em>. A dark triangle in the top-right corner of a bulletin means a note is attached — click it to read or edit the note</div>
+    </div>
+
+    <div class="help-section">
+      <div class="help-heading">Nation shared stations</div>
+      <div class="help-row">A small red <strong style="color:#ff3b30;">N</strong> in the corner of a station label means that bulletin is also shared with Nation</div>
+    </div>
+
+    <div class="help-section">
+      <div class="help-heading">Countdown</div>
+      <div class="help-row">The timer top-right counts down to <strong>:50 past the hour</strong> — when bulletins should be dispatched. It turns amber under 5 minutes and flashes red under 2 minutes</div>
+    </div>
+
+    <div class="help-section">
+      <div class="help-heading">Reset</div>
+      <div class="help-row">Resets all bulletins in the current shift to Pending and clears all notes</div>
+    </div>
+  </div>
 </div>
 
-<!-- GRID -->
-<div class="grid-wrapper">
-  <div class="bulletin-grid" id="bulletinGrid"></div>
-</div>
-
-<!-- CONTEXT MENU -->
-<div class="context-menu" id="contextMenu">
-  <div class="context-menu-title" id="contextTitle">Set status</div>
-  <div class="context-option pending"    onclick="setStatus('PENDING')">   <div class="context-swatch"></div>Pending</div>
-  <div class="context-option ready"      onclick="setStatus('READY')">     <div class="context-swatch"></div>Ready</div>
-  <div class="context-option redispatch" onclick="setStatus('REDISPATCH')"><div class="context-swatch"></div>Redispatch</div>
-  <div class="context-option dispatched" onclick="setStatus('DISPATCHED')"><div class="context-swatch"></div>Dispatched</div>
-  <div class="context-option breaking"   onclick="setStatus('BREAKING')">  <div class="context-swatch"></div>Breaking</div>
+<!-- Note modal -->
+<div class="note-modal-overlay" id="noteOverlay">
+  <div class="note-modal">
+    <div class="note-modal-title">Note</div>
+    <div class="note-modal-region" id="noteModalRegion"></div>
+    <textarea id="noteTextarea" placeholder="Type a note…"></textarea>
+    <div class="note-modal-actions">
+      <button class="note-btn cancel" onclick="closeNoteModal()">Cancel</button>
+      <button class="note-btn clear"  onclick="clearNote()">Clear</button>
+      <button class="note-btn save"   onclick="saveNote()">Save</button>
+    </div>
+  </div>
 </div>
 
 <script>
-// ─── CONFIG ────────────────────────────────────────────────────────
-// Edit these to match your sheet structure.
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZwDASG4UAeC15TUj4KOfBnvsHSc2PWELBN4sicIbcKu0GUjSV0f_Qr4u2D3qFKGoo6A/exec';
+
 const REGIONS = [
-  'CORNWALL', 'COV & WAR', 'DEVON', 'DORSET',
-  'GLOUCESTER', 'HER & WOR', 'SOMERSET', 'SWINDON',
-  'THE WEST', 'WILTSHIRE'
+  'CORNWALL','COV & WAR','DEVON','DORSET',
+  'GLOUCESTER','HER & WOR','SOMERSET','SWINDON',
+  'THE WEST','WILTSHIRE'
 ];
+const NATION_REGIONS = new Set(['CORNWALL','DEVON','DORSET','SOMERSET']);
 
 const AM_SLOTS = ['0600','0700','0800','0900','1000','1100','1200','1300'];
-const PM_SLOTS = ['1400','1500','1600','1700','1800','1900','2000','2100'];
+const PM_SLOTS = ['1400','1500','1600','1700','1800','1900'];
 
-// Cycle order on left-click
-const STATUS_CYCLE = ['PENDING','READY','REDISPATCH','DISPATCHED','BREAKING'];
-const STATUS_CLASS  = { PENDING:'pending', READY:'ready', REDISPATCH:'redispatch', DISPATCHED:'dispatched', BREAKING:'breaking' };
-const STATUS_LABEL  = { PENDING:'Pending', READY:'Ready', REDISPATCH:'Redispatch', DISPATCHED:'Dispatched', BREAKING:'Breaking' };
+const CYCLE = ['PENDING','READY','REDISPATCH','DISPATCHED','BREAKING'];
+const CLS   = {PENDING:'pending',READY:'ready',REDISPATCH:'redispatch',DISPATCHED:'dispatched',BREAKING:'breaking'};
+const LABEL = {PENDING:'Pending',READY:'Ready',REDISPATCH:'Redispatch',DISPATCHED:'Dispatched',BREAKING:'Breaking'};
 
-// ─── STATE ─────────────────────────────────────────────────────────
-let SCRIPT_URL = localStorage.getItem('bulletinScriptUrl') || 'https://script.google.com/macros/s/AKfycbzZwDASG4UAeC15TUj4KOfBnvsHSc2PWELBN4sicIbcKu0GUjSV0f_Qr4u2D3qFKGoo6A/exec';
-let currentShift = 'PM';
-let data = {};       // { "CORNWALL|1400": "DISPATCHED", ... }
-let pendingCell = null;  // { region, slot } for context menu
-let syncTimer = null;
-let pollTimer = null;
+let shift = 'PM';
+let mode  = 'creation'; // 'creation' | 'delivery'
+let data  = {};
+let prevData = {}; // tracks previous status before dispatch
+let notes = {}; // key -> note string
+let pendingCell = null;
+let noteTargetKey = null;
+let saving = false;
+const lockedKeys = new Map(); // key -> timestamp, immune to poll overwrites while saving
 
-// ─── INIT ──────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   updateClock();
   setInterval(updateClock, 1000);
-  updateShiftUI();
   buildGrid();
-
-  if (SCRIPT_URL) {
-    document.getElementById('configBanner').style.display = 'none';
-    document.getElementById('scriptUrl').value = SCRIPT_URL;
-    fetchData();
-    startPolling();
-  } else {
-    document.getElementById('loadingScreen').style.display = 'none';
-  }
-
-  document.addEventListener('click', () => closeContextMenu());
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeContextMenu(); });
+  fetchData();
+  setInterval(fetchData, 1000);
+  document.addEventListener('click', closeCtx);
+  document.addEventListener('keydown', e => { if(e.key==='Escape') closeCtx(); });
 });
 
 function updateClock() {
   const now = new Date();
-  document.getElementById('clock').textContent =
-    String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = now.getSeconds();
+  document.getElementById('clock').textContent = h + ':' + m;
+
+  const secsIntoHour = now.getMinutes() * 60 + s;
+  const target = 50 * 60;
+  let secsLeft = target - secsIntoHour;
+  if (secsLeft < 0) secsLeft += 3600;
+
+  const mm = String(Math.floor(secsLeft / 60));
+  const ss = String(secsLeft % 60).padStart(2,'0');
+  const el = document.getElementById('countdown');
+  el.textContent = mm + ':' + ss;
+  el.className = 'countdown-val ' + (secsLeft <= 120 ? 'urgent' : secsLeft <= 300 ? 'soon' : 'ok');
 }
 
-// ─── SHIFT ─────────────────────────────────────────────────────────
 function setShift(s) {
-  currentShift = s;
-  document.getElementById('btnAM').classList.toggle('active', s === 'AM');
-  document.getElementById('btnPM').classList.toggle('active', s === 'PM');
-  updateShiftUI();
+  shift = s;
+  document.getElementById('btnAM').classList.toggle('active', s==='AM');
+  document.getElementById('btnPM').classList.toggle('active', s==='PM');
   buildGrid();
-  renderCells();
 }
 
-function updateShiftUI() {}
+function slots() { return shift === 'AM' ? AM_SLOTS : PM_SLOTS; }
 
-function slots() { return currentShift === 'AM' ? AM_SLOTS : PM_SLOTS; }
+function setMode(m) {
+  mode = m;
+  document.getElementById('btnCreation').classList.toggle('active', m === 'creation');
+  document.getElementById('btnDelivery').classList.toggle('active', m === 'delivery');
+}
 
-// ─── GRID BUILD ────────────────────────────────────────────────────
 function buildGrid() {
-  const grid = document.getElementById('bulletinGrid');
-  const s = slots();
-  grid.style.setProperty('--slot-count', s.length);
-  grid.innerHTML = '';
-
-  // Header row
-  grid.appendChild(el('div', 'grid-corner'));
-  s.forEach(slot => {
-    const h = el('div', 'slot-header');
-    h.textContent = slot;
-    grid.appendChild(h);
-  });
-
-  // Data rows
+  const wrap = document.getElementById('gridWrap');
+  wrap.innerHTML = '';
   REGIONS.forEach(region => {
-    const lbl = el('div', 'region-label');
-    const nm = el('div', 'region-name');
-    nm.textContent = region;
-    lbl.appendChild(nm);
-    grid.appendChild(lbl);
+    const row = document.createElement('div');
+    row.className = 'grid-row';
 
-    s.forEach(slot => {
-      const key = region + '|' + slot;
+    const lbl = document.createElement('div');
+    lbl.className = 'region-lbl';
+    lbl.textContent = region;
+    if (NATION_REGIONS.has(region)) {
+      const nb = document.createElement('span');
+      nb.className = 'nation-badge';
+      nb.textContent = 'N';
+      lbl.appendChild(nb);
+    }
+    row.appendChild(lbl);
+
+    slots().forEach(slot => {
+      const key    = region + '|' + slot;
       const status = (data[key] || 'PENDING').toUpperCase();
-      const cell = el('div', 'bulletin-cell ' + (STATUS_CLASS[status] || 'dispatched'));
+      const cell   = document.createElement('div');
+      cell.className = 'cell ' + (CLS[status] || 'pending');
       cell.dataset.key = key;
-      cell.dataset.region = region;
-      cell.dataset.slot = slot;
 
-      const timeEl = el('div','cell-time'); timeEl.textContent = slot;
-      const statEl = el('div','cell-status'); statEl.textContent = STATUS_LABEL[status] || status;
-      cell.appendChild(timeEl);
-      cell.appendChild(statEl);
+      const stripe = document.createElement('div'); stripe.className='prev-stripe ' + (prevData[key] || 'none');
+      const curl = document.createElement('div'); curl.className='note-curl'; curl.style.display = notes[key] ? 'block' : 'none';
+      curl.addEventListener('click', e => { e.stopPropagation(); openNoteModal(key, region, slot); });
+      const t = document.createElement('div'); t.className='cell-time';   t.textContent = slot;
+      const s = document.createElement('div'); s.className='cell-status'; s.textContent = LABEL[status]||status;
+      cell.appendChild(stripe); cell.appendChild(curl); cell.appendChild(t); cell.appendChild(s);
 
-      cell.addEventListener('click',  e => { e.stopPropagation(); cycleStatus(key, cell); });
-      cell.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); openContextMenu(e, key, region, slot); });
-
-      grid.appendChild(cell);
+      cell.addEventListener('click', e => {
+        e.stopPropagation();
+        if (mode === 'delivery') {
+          applyStatus(key, 'DISPATCHED', cell);
+        } else {
+          cycleStatus(key, cell);
+        }
+      });
+      cell.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); openCtx(e, key, region, slot); });
+      row.appendChild(cell);
     });
+
+    wrap.appendChild(row);
   });
 }
 
 function renderCells() {
-  document.querySelectorAll('.bulletin-cell').forEach(cell => {
-    const key    = cell.dataset.key;
+  const now = Date.now();
+  document.querySelectorAll('.cell[data-key]').forEach(cell => {
+    const key  = cell.dataset.key;
+    const slot = key.split('|')[1];
+    if (!slots().includes(slot)) return;
+    if (lockedKeys.has(key) && now < lockedKeys.get(key)) return; // locked — don't overwrite
+    lockedKeys.delete(key);
     const status = (data[key] || 'PENDING').toUpperCase();
-    const cls    = STATUS_CLASS[status] || 'dispatched';
-    cell.className = 'bulletin-cell ' + cls;
-    cell.querySelector('.cell-status').textContent = STATUS_LABEL[status] || status;
+    cell.className = 'cell ' + (CLS[status]||'pending');
+    cell.querySelector('.cell-status').textContent = LABEL[status]||status;
+    const stripe = cell.querySelector('.prev-stripe');
+    if (stripe) { stripe.className = 'prev-stripe ' + (prevData[key] || 'none'); }
   });
 }
 
-function el(tag, cls) {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  return e;
-}
-
-// ─── STATUS CHANGE ─────────────────────────────────────────────────
 function cycleStatus(key, cell) {
   const current = (data[key] || 'PENDING').toUpperCase();
-  const idx = STATUS_CYCLE.indexOf(current);
-  const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+  const next = CYCLE[(CYCLE.indexOf(current) + 1) % CYCLE.length];
   applyStatus(key, next, cell);
 }
 
 function applyStatus(key, status, cell) {
+  // Track previous status for the stripe
+  const prev = (data[key] || 'PENDING').toUpperCase();
+  if (status === 'DISPATCHED') {
+    if (prev !== 'DISPATCHED') prevData[key] = CLS[prev] || 'none';
+  } else {
+    prevData[key] = 'none'; // clear stripe when not dispatched
+  }
   data[key] = status;
-  const cls = STATUS_CLASS[status] || 'dispatched';
+  lockedKeys.set(key, Date.now() + 5000); // lock for 5s
   if (!cell) cell = document.querySelector('[data-key="' + key + '"]');
   if (cell) {
-    cell.className = 'bulletin-cell ' + cls + ' saving';
-    cell.querySelector('.cell-status').textContent = STATUS_LABEL[status];
-    setTimeout(() => cell.classList.remove('saving'), 800);
+    cell.className = 'cell ' + (CLS[status]||'pending');
+    cell.querySelector('.cell-status').textContent = LABEL[status];
+    const stripe = cell.querySelector('.prev-stripe');
+    if (stripe) { stripe.className = 'prev-stripe ' + (prevData[key] || 'none'); }
   }
   pushUpdate(key, status);
 }
 
-// ─── CONTEXT MENU ──────────────────────────────────────────────────
-function openContextMenu(e, key, region, slot) {
-  pendingCell = { key, region, slot };
-  const menu = document.getElementById('contextMenu');
-  document.getElementById('contextTitle').textContent = region + ' · ' + slot;
-  menu.classList.add('visible');
-  const x = Math.min(e.clientX, window.innerWidth  - 200);
-  const y = Math.min(e.clientY, window.innerHeight - 240);
+function openCtx(e, key, region, slot) {
+  pendingCell = { key };
+  const menu = document.getElementById('ctx');
+  document.getElementById('ctxTitle').textContent = region + ' · ' + slot;
+  menu.classList.add('show');
+  const x = Math.min(e.clientX, window.innerWidth  - 210);
+  const y = Math.min(e.clientY, window.innerHeight - 250);
   menu.style.left = x + 'px';
   menu.style.top  = y + 'px';
 }
 
-function closeContextMenu() {
-  document.getElementById('contextMenu').classList.remove('visible');
+function closeCtx() {
+  document.getElementById('ctx').classList.remove('show');
   pendingCell = null;
 }
 
 function setStatus(status) {
   if (!pendingCell) return;
   applyStatus(pendingCell.key, status);
-  closeContextMenu();
+  closeCtx();
 }
 
-// ─── RESET ─────────────────────────────────────────────────────────
 function confirmReset() {
-  if (!confirm('Reset ALL bulletins to PENDING for this shift?')) return;
-  slots().forEach(slot => {
-    REGIONS.forEach(region => {
-      const key = region + '|' + slot;
-      data[key] = 'PENDING';
-    });
-  });
+  if (!confirm('Reset ALL bulletins to PENDING and clear all notes for this shift?')) return;
+  slots().forEach(slot => REGIONS.forEach(region => {
+    const key = region+'|'+slot;
+    data[key] = 'PENDING';
+    notes[key] = '';
+    prevData[key] = 'none';
+  }));
+  // Hide all note curls
+  document.querySelectorAll('.note-curl').forEach(c => c.style.display = 'none');
   renderCells();
   pushReset();
 }
 
-// ─── SYNC ──────────────────────────────────────────────────────────
-function setSyncState(state, label) {
-  const dot = document.getElementById('syncDot');
-  const lbl = document.getElementById('syncLabel');
-  dot.className = 'sync-dot' + (state === 'syncing' ? ' syncing' : state === 'error' ? ' error' : '');
-  lbl.textContent = label;
+function setSync(state, label) {
+  document.getElementById('syncDot').className = 'sync-dot' + (state==='syncing' ? ' syncing' : state==='error' ? ' error' : '');
+  document.getElementById('syncLabel').textContent = label;
 }
 
-function startPolling() {
-  if (pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(fetchData, 1000); // every 15s
+// ── HELP MODAL ───────────────────────────────
+function openHelp() {
+  document.getElementById('helpOverlay').classList.add('show');
 }
+function closeHelp() {
+  document.getElementById('helpOverlay').classList.remove('show');
+}
+
+// ── NOTE FUNCTIONS ───────────────────────────
+function openNoteFromCtx() {
+  if (!pendingCell) return;
+  const { key, region, slot } = pendingCell;
+  closeCtx();
+  openNoteModal(key, region, slot);
+}
+
+function openNoteModal(key, region, slot) {
+  noteTargetKey = key;
+  document.getElementById('noteModalRegion').textContent = region + ' · ' + slot;
+  document.getElementById('noteTextarea').value = notes[key] || '';
+  document.getElementById('noteOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('noteTextarea').focus(), 50);
+}
+
+function closeNoteModal() {
+  document.getElementById('noteOverlay').classList.remove('show');
+  noteTargetKey = null;
+}
+
+function saveNote() {
+  if (!noteTargetKey) return;
+  const text = document.getElementById('noteTextarea').value.trim();
+  notes[noteTargetKey] = text;
+  updateNoteCurl(noteTargetKey, !!text);
+  closeNoteModal();
+}
+
+function clearNote() {
+  if (!noteTargetKey) return;
+  notes[noteTargetKey] = '';
+  updateNoteCurl(noteTargetKey, false);
+  closeNoteModal();
+}
+
+function updateNoteCurl(key, hasNote) {
+  const cell = document.querySelector('[data-key="' + key + '"]');
+  if (!cell) return;
+  const curl = cell.querySelector('.note-curl');
+  if (curl) curl.style.display = hasNote ? 'block' : 'none';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeCtx();
+    closeNoteModal();
+    closeHelp();
+  }
+  if (e.key === 'Enter' && e.metaKey && document.getElementById('noteOverlay').classList.contains('show')) {
+    saveNote();
+  }
+});
 
 async function fetchData() {
-  if (!SCRIPT_URL) return;
-  if (window._saving) return;  // skip poll while a save is in flight
-  setSyncState('syncing', 'Syncing…');
   try {
-    const res = await fetch(SCRIPT_URL + '?action=get', { cache: 'no-store' });
+    const res  = await fetch(SCRIPT_URL + '?action=get', { cache:'no-store' });
     const json = await res.json();
     if (json.data) {
       data = json.data;
       renderCells();
       const now = new Date();
-      setSyncState('ok', 'Synced ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0'));
+      setSync('ok', String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0'));
     }
-    document.getElementById('loadingScreen').style.display = 'none';
-  } catch(err) {
-    setSyncState('error', 'Sync failed');
-    document.getElementById('loadingScreen').style.display = 'none';
-    console.error(err);
-  }
+  } catch(err) { setSync('error','Sync failed'); }
 }
 
-// Apps Script blocks CORS on POST from cross-origin pages.
-// All writes go via GET params instead - Apps Script handles these fine.
 async function pushUpdate(key, status) {
-  if (!SCRIPT_URL) return;
-  window._saving = true;
-  setSyncState('syncing','Saving…');
+  saving = true;
+  setSync('syncing','Saving…');
   try {
-    const url = SCRIPT_URL + '?action=set&key=' + encodeURIComponent(key) + '&status=' + encodeURIComponent(status);
-    const res = await fetch(url, { cache: 'no-store' });
+    const res  = await fetch(SCRIPT_URL + '?action=set&key=' + encodeURIComponent(key) + '&status=' + encodeURIComponent(status), { cache:'no-store' });
     const json = await res.json();
     if (json.ok) {
-      setSyncState('ok','Saved');
-    } else {
-      throw new Error(json.error || 'Unknown');
-    }
+      setSync('ok','Saved');
+      lockedKeys.delete(key); // saved — unlock immediately so poll can confirm
+    } else { throw new Error(json.error); }
   } catch(err) {
-    setSyncState('error','Save failed');
-    console.error(err);
-  } finally {
-    window._saving = false;
+    setSync('error','Save failed');
+    lockedKeys.delete(key); // unlock on error too
   }
+  finally { saving = false; }
 }
 
 async function pushReset() {
-  if (!SCRIPT_URL) return;
-  const resetData = {};
-  slots().forEach(slot => REGIONS.forEach(region => { resetData[region+'|'+slot] = 'PENDING'; }));
-  setSyncState('syncing','Resetting…');
+  saving = true;
+  setSync('syncing','Resetting…');
+  const rd = {};
+  slots().forEach(slot => REGIONS.forEach(region => { rd[region+'|'+slot]='PENDING'; }));
   try {
-    const url = SCRIPT_URL + '?action=reset&data=' + encodeURIComponent(JSON.stringify(resetData));
-    const res = await fetch(url, { cache: 'no-store' });
+    const res  = await fetch(SCRIPT_URL + '?action=reset&data=' + encodeURIComponent(JSON.stringify(rd)), { cache:'no-store' });
     const json = await res.json();
-    if (json.ok) {
-      setSyncState('ok','Reset done');
-    } else {
-      throw new Error(json.error || 'Unknown');
-    }
-  } catch(err) {
-    setSyncState('error','Reset failed');
-    console.error(err);
-  }
-}
-
-// ─── CONFIG ────────────────────────────────────────────────────────
-function saveUrl() {
-  const url = document.getElementById('scriptUrl').value.trim();
-  if (!url.startsWith('https://script.google.com')) {
-    alert('That doesn\'t look like a Google Apps Script URL — check and try again.');
-    return;
-  }
-  SCRIPT_URL = url;
-  localStorage.setItem('bulletinScriptUrl', url);
-  document.getElementById('configBanner').style.display = 'none';
-  fetchData();
-  startPolling();
+    if (json.ok) { setSync('ok','Reset done'); }
+    else { throw new Error(json.error); }
+  } catch(err) { setSync('error','Reset failed'); }
+  finally { saving = false; }
 }
 </script>
 </body>
