@@ -757,18 +757,23 @@ async function fetchData() {
   }
 }
 
+// Apps Script blocks CORS on POST from cross-origin pages.
+// All writes go via GET params instead - Apps Script handles these fine.
 async function pushUpdate(key, status) {
   if (!SCRIPT_URL) return;
   setSyncState('syncing','Saving…');
   try {
-    await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'set', key, status })
-    });
-    setSyncState('ok','Saved');
+    const url = SCRIPT_URL + '?action=set&key=' + encodeURIComponent(key) + '&status=' + encodeURIComponent(status);
+    const res = await fetch(url, { cache: 'no-store' });
+    const json = await res.json();
+    if (json.ok) {
+      setSyncState('ok','Saved');
+    } else {
+      throw new Error(json.error || 'Unknown');
+    }
   } catch(err) {
     setSyncState('error','Save failed');
+    console.error(err);
   }
 }
 
@@ -778,14 +783,17 @@ async function pushReset() {
   slots().forEach(slot => REGIONS.forEach(region => { resetData[region+'|'+slot] = 'DISPATCHED'; }));
   setSyncState('syncing','Resetting…');
   try {
-    await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'reset', data: resetData })
-    });
-    setSyncState('ok','Reset done');
+    const url = SCRIPT_URL + '?action=reset&data=' + encodeURIComponent(JSON.stringify(resetData));
+    const res = await fetch(url, { cache: 'no-store' });
+    const json = await res.json();
+    if (json.ok) {
+      setSyncState('ok','Reset done');
+    } else {
+      throw new Error(json.error || 'Unknown');
+    }
   } catch(err) {
     setSyncState('error','Reset failed');
+    console.error(err);
   }
 }
 
