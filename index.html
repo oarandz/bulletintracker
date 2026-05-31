@@ -13,7 +13,7 @@
 :root {
   --pending:    #CC1100;
   --ready:      #1A6B28;
-  --redispatch: #0A3580;
+  --redispatch: #1A6EB5;
   --dispatched: #1A1A1A;
   --breaking:   #A07800;
 }
@@ -142,8 +142,12 @@ body {
   font-family: 'Outfit', sans-serif;
   font-size: 26px;
   font-weight: 900;
-  letter-spacing: 0.5px;
+  letter-spacing: 0;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
+  min-width: 68px;
+  display: inline-block;
+  text-align: right;
 }
 
 .countdown-val.ok     { color: #1FD1BD; }
@@ -153,10 +157,13 @@ body {
 
 .clock {
   font-family: 'Outfit', sans-serif;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 900;
-  letter-spacing: 0.5px;
+  letter-spacing: 0;
   color: #fff;
+  font-variant-numeric: tabular-nums;
+  min-width: 120px;
+  text-align: right;
 }
 
 .sync-pill {
@@ -526,8 +533,7 @@ body {
     </div>
     <div class="clock" id="clock">00:00</div>
     <div class="sync-pill">
-      <div class="sync-dot" id="syncDot"></div>
-      <span id="syncLabel">Connecting</span>
+      <div class="sync-dot" id="syncDot" title="Connecting"></div>
     </div>
   </div>
 </div>
@@ -657,7 +663,8 @@ function updateClock() {
   const h = String(now.getHours()).padStart(2,'0');
   const m = String(now.getMinutes()).padStart(2,'0');
   const s = now.getSeconds();
-  document.getElementById('clock').textContent = h + ':' + m;
+  const ss2 = String(s).padStart(2,'0');
+  document.getElementById('clock').textContent = h + ':' + m + ':' + ss2;
 
   const secsIntoHour = now.getMinutes() * 60 + s;
   const target = 50 * 60;
@@ -813,8 +820,9 @@ function confirmReset() {
 }
 
 function setSync(state, label) {
-  document.getElementById('syncDot').className = 'sync-dot' + (state==='syncing' ? ' syncing' : state==='error' ? ' error' : '');
-  document.getElementById('syncLabel').textContent = label;
+  const dot = document.getElementById('syncDot');
+  dot.className = 'sync-dot' + (state==='syncing' ? ' syncing' : state==='error' ? ' error' : '');
+  dot.title = label;
 }
 
 // ── HELP MODAL ───────────────────────────────
