@@ -525,7 +525,7 @@
   <div class="legend-item dispatched"><div class="legend-swatch"></div>Dispatched</div>
   <div class="legend-item breaking"> <div class="legend-swatch"></div>Breaking</div>
   <div class="legend-spacer"></div>
-  <button class="reset-btn" onclick="confirmReset()">↺ Reset All</button>
+  <button class="reset-btn" onclick="confirmReset()">↺ Reset to Pending</button>
 </div>
 
 <!-- GRID -->
@@ -633,7 +633,7 @@ function buildGrid() {
 
     s.forEach(slot => {
       const key = region + '|' + slot;
-      const status = (data[key] || 'DISPATCHED').toUpperCase();
+      const status = (data[key] || 'PENDING').toUpperCase();
       const cell = el('div', 'bulletin-cell ' + (STATUS_CLASS[status] || 'dispatched'));
       cell.dataset.key = key;
       cell.dataset.region = region;
@@ -655,7 +655,7 @@ function buildGrid() {
 function renderCells() {
   document.querySelectorAll('.bulletin-cell').forEach(cell => {
     const key    = cell.dataset.key;
-    const status = (data[key] || 'DISPATCHED').toUpperCase();
+    const status = (data[key] || 'PENDING').toUpperCase();
     const cls    = STATUS_CLASS[status] || 'dispatched';
     cell.className = 'bulletin-cell ' + cls;
     cell.querySelector('.cell-status').textContent = STATUS_LABEL[status] || status;
@@ -670,7 +670,7 @@ function el(tag, cls) {
 
 // ─── STATUS CHANGE ─────────────────────────────────────────────────
 function cycleStatus(key, cell) {
-  const current = (data[key] || 'DISPATCHED').toUpperCase();
+  const current = (data[key] || 'PENDING').toUpperCase();
   const idx = STATUS_CYCLE.indexOf(current);
   const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
   applyStatus(key, next, cell);
@@ -713,11 +713,11 @@ function setStatus(status) {
 
 // ─── RESET ─────────────────────────────────────────────────────────
 function confirmReset() {
-  if (!confirm('Reset ALL bulletins to DISPATCHED for this shift?')) return;
+  if (!confirm('Reset ALL bulletins to PENDING for this shift?')) return;
   slots().forEach(slot => {
     REGIONS.forEach(region => {
       const key = region + '|' + slot;
-      data[key] = 'DISPATCHED';
+      data[key] = 'PENDING';
     });
   });
   renderCells();
@@ -734,11 +734,12 @@ function setSyncState(state, label) {
 
 function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(fetchData, 15000); // every 15s
+  pollTimer = setInterval(fetchData, 1000); // every 15s
 }
 
 async function fetchData() {
   if (!SCRIPT_URL) return;
+  if (window._saving) return;  // skip poll while a save is in flight
   setSyncState('syncing', 'Syncing…');
   try {
     const res = await fetch(SCRIPT_URL + '?action=get', { cache: 'no-store' });
@@ -761,6 +762,7 @@ async function fetchData() {
 // All writes go via GET params instead - Apps Script handles these fine.
 async function pushUpdate(key, status) {
   if (!SCRIPT_URL) return;
+  window._saving = true;
   setSyncState('syncing','Saving…');
   try {
     const url = SCRIPT_URL + '?action=set&key=' + encodeURIComponent(key) + '&status=' + encodeURIComponent(status);
@@ -774,13 +776,15 @@ async function pushUpdate(key, status) {
   } catch(err) {
     setSyncState('error','Save failed');
     console.error(err);
+  } finally {
+    window._saving = false;
   }
 }
 
 async function pushReset() {
   if (!SCRIPT_URL) return;
   const resetData = {};
-  slots().forEach(slot => REGIONS.forEach(region => { resetData[region+'|'+slot] = 'DISPATCHED'; }));
+  slots().forEach(slot => REGIONS.forEach(region => { resetData[region+'|'+slot] = 'PENDING'; }));
   setSyncState('syncing','Resetting…');
   try {
     const url = SCRIPT_URL + '?action=reset&data=' + encodeURIComponent(JSON.stringify(resetData));
