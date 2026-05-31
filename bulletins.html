@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulletin Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --status-pending:    #CC2200;
+    --status-ready:      #1A7A2E;
+    --status-redispatch: #0A3D8F;
+    --status-dispatched: #1A1A1A;
+    --status-breaking:   #B8860B;
+    --pending-text:      #FF6B50;
+    --ready-text:        #4ADE80;
+    --redispatch-text:   #60A5FA;
+    --dispatched-text:   #888888;
+    --breaking-text:     #FFD700;
+    --bg:                #0D0D0D;
+    --surface:           #161616;
+    --border:            #2A2A2A;
+    --header-bg:         #111111;
+    --text-primary:      #F0F0F0;
+    --text-muted:        #666;
+    --accent:            #C8AA6E;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Barlow', sans-serif;
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .logo-block {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+  }
+
+  .logo-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .logo-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-primary);
+  }
+
+  .shift-toggle {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .shift-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 6px 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .shift-btn.active {
+    background: var(--accent);
+    color: #111;
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .clock {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--accent);
+    min-width: 90px;
+    text-align: right;
+  }
+
+  .sync-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.5px;
+  }
+
+  .sync-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--ready-text);
+    transition: background 0.3s;
+  }
+
+  .sync-dot.syncing { background: var(--breaking-text); animation: pulse 0.8s infinite; }
+  .sync-dot.error   { background: var(--pending-text); }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* CONFIG BANNER */
+  .config-banner {
+    background: #1A1200;
+    border-bottom: 1px solid #3A2800;
+    padding: 10px 24px;
+    font-size: 13px;
+    color: #B8860B;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .config-banner input {
+    background: #0D0D0D;
+    border: 1px solid #3A2800;
+    color: #FFD700;
+    font-family: 'Barlow', sans-serif;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 3px;
+    width: 420px;
+  }
+
+  .config-banner button {
+    background: #3A2800;
+    border: 1px solid #6A4800;
+    color: #FFD700;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 1px;
+    padding: 4px 14px;
+    border-radius: 3px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+
+  /* LEGEND */
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 10px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .legend-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-right: 4px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .legend-swatch {
+    width: 28px;
+    height: 14px;
+    border-radius: 2px;
+  }
+
+  .legend-item.pending  .legend-swatch { background: var(--status-pending); }
+  .legend-item.ready    .legend-swatch { background: var(--status-ready); }
+  .legend-item.redispatch .legend-swatch { background: var(--status-redispatch); }
+  .legend-item.dispatched .legend-swatch { background: var(--status-dispatched); border: 1px solid #333; }
+  .legend-item.breaking .legend-swatch { background: var(--status-breaking); }
+
+  .legend-item.pending    { color: var(--pending-text); }
+  .legend-item.ready      { color: var(--ready-text); }
+  .legend-item.redispatch { color: var(--redispatch-text); }
+  .legend-item.dispatched { color: var(--dispatched-text); }
+  .legend-item.breaking   { color: var(--breaking-text); }
+
+  .legend-spacer { flex: 1; }
+
+  .reset-btn {
+    background: none;
+    border: 1px solid #333;
+    color: var(--text-muted);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 5px 16px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .reset-btn:hover { border-color: #555; color: var(--text-primary); }
+
+  /* MAIN GRID */
+  .grid-wrapper {
+    padding: 20px 24px;
+    overflow-x: auto;
+  }
+
+  .bulletin-grid {
+    display: grid;
+    grid-template-columns: 160px repeat(var(--slot-count, 6), 1fr);
+    gap: 3px;
+    min-width: 700px;
+  }
+
+  /* HEADER ROW */
+  .grid-corner {
+    background: transparent;
+  }
+
+  .slot-header {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 8px 6px;
+    text-align: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  /* REGION LABEL */
+  .region-label {
+    display: flex;
+    align-items: center;
+    padding-right: 12px;
+  }
+
+  .region-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+
+  /* BULLETIN CELL */
+  .bulletin-cell {
+    border-radius: 3px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: filter 0.1s, transform 0.08s;
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 64px;
+  }
+
+  .bulletin-cell:hover { filter: brightness(1.2); transform: scale(1.01); }
+  .bulletin-cell:active { transform: scale(0.98); }
+
+  .bulletin-cell.pending    { background: var(--status-pending); }
+  .bulletin-cell.ready      { background: var(--status-ready); }
+  .bulletin-cell.redispatch { background: var(--status-redispatch); }
+  .bulletin-cell.dispatched { background: var(--status-dispatched); border: 1px solid #2A2A2A; }
+  .bulletin-cell.breaking   { background: var(--status-breaking); }
+
+  /* BREAKING: pulsing glow */
+  .bulletin-cell.breaking::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,215,0,0.12);
+    animation: breakingGlow 1.2s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes breakingGlow { 0%,100%{opacity:0} 50%{opacity:1} }
+
+  .cell-time {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    line-height: 1;
+    color: rgba(255,255,255,0.9);
+  }
+
+  .cell-status {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+    margin-top: 3px;
+  }
+
+  .bulletin-cell.breaking .cell-time,
+  .bulletin-cell.breaking .cell-status { color: rgba(0,0,0,0.85); }
+
+  /* SAVING OVERLAY */
+  .bulletin-cell.saving::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.06);
+    animation: savePulse 0.5s ease-in-out infinite;
+  }
+
+  @keyframes savePulse { 0%,100%{opacity:0} 50%{opacity:1} }
+
+  /* CONTEXT MENU */
+  .context-menu {
+    position: fixed;
+    background: #1C1C1C;
+    border: 1px solid #333;
+    border-radius: 6px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    z-index: 999;
+    overflow: hidden;
+    min-width: 180px;
+    display: none;
+  }
+
+  .context-menu.visible { display: block; }
+
+  .context-menu-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 10px 14px 6px;
+    border-bottom: 1px solid #2A2A2A;
+  }
+
+  .context-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background 0.1s;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .context-option:hover { background: #2A2A2A; }
+
+  .context-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .context-option.pending    .context-swatch { background: var(--status-pending); }
+  .context-option.ready      .context-swatch { background: var(--status-ready); }
+  .context-option.redispatch .context-swatch { background: var(--status-redispatch); }
+  .context-option.dispatched .context-swatch { background: #444; border: 1px solid #555; }
+  .context-option.breaking   .context-swatch { background: var(--status-breaking); }
+
+  .context-option.pending    { color: var(--pending-text); }
+  .context-option.ready      { color: var(--ready-text); }
+  .context-option.redispatch { color: var(--redispatch-text); }
+  .context-option.dispatched { color: var(--dispatched-text); }
+  .context-option.breaking   { color: var(--breaking-text); }
+
+  /* LOADING */
+  .loading-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 200;
+  }
+
+  .loading-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .loading-bar {
+    width: 200px;
+    height: 2px;
+    background: #222;
+    border-radius: 1px;
+    overflow: hidden;
+  }
+
+  .loading-fill {
+    height: 100%;
+    background: var(--accent);
+    animation: loadFill 1.5s ease-in-out infinite;
+  }
+
+  @keyframes loadFill { 0%{width:0%} 60%{width:90%} 100%{width:100%} }
+
+  .error-msg {
+    color: var(--pending-text);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    max-width: 500px;
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+</style>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-title">Bulletin Board</div>
+  <div class="loading-bar"><div class="loading-fill"></div></div>
+  <div class="error-msg" id="loadingMsg">Connecting to data source…</div>
+</div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo-block">
+      <span class="logo-label">South &amp; West Hub</span>
+      <span class="logo-title">Bulletins</span>
+    </div>
+    <div class="shift-toggle">
+      <button class="shift-btn active" id="btnAM" onclick="setShift('AM')">AM</button>
+      <button class="shift-btn" id="btnPM" onclick="setShift('PM')">PM</button>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="sync-status">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncLabel">Loading…</span>
+    </div>
+    <div class="clock" id="clock">00:00</div>
+  </div>
+</div>
+
+<!-- CONFIG BANNER (shown until URL is saved) -->
+<div class="config-banner" id="configBanner">
+  ⚙ Paste your Google Apps Script Web App URL:
+  <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec" />
+  <button onclick="saveUrl()">Save &amp; Connect</button>
+</div>
+
+<!-- LEGEND -->
+<div class="legend">
+  <span class="legend-label">Status:</span>
+  <div class="legend-item pending">  <div class="legend-swatch"></div>Pending</div>
+  <div class="legend-item ready">    <div class="legend-swatch"></div>Ready</div>
+  <div class="legend-item redispatch"><div class="legend-swatch"></div>Redispatch</div>
+  <div class="legend-item dispatched"><div class="legend-swatch"></div>Dispatched</div>
+  <div class="legend-item breaking"> <div class="legend-swatch"></div>Breaking</div>
+  <div class="legend-spacer"></div>
+  <button class="reset-btn" onclick="confirmReset()">↺ Reset All</button>
+</div>
+
+<!-- GRID -->
+<div class="grid-wrapper">
+  <div class="bulletin-grid" id="bulletinGrid"></div>
+</div>
+
+<!-- CONTEXT MENU -->
+<div class="context-menu" id="contextMenu">
+  <div class="context-menu-title" id="contextTitle">Set status</div>
+  <div class="context-option pending"    onclick="setStatus('PENDING')">   <div class="context-swatch"></div>Pending</div>
+  <div class="context-option ready"      onclick="setStatus('READY')">     <div class="context-swatch"></div>Ready</div>
+  <div class="context-option redispatch" onclick="setStatus('REDISPATCH')"><div class="context-swatch"></div>Redispatch</div>
+  <div class="context-option dispatched" onclick="setStatus('DISPATCHED')"><div class="context-swatch"></div>Dispatched</div>
+  <div class="context-option breaking"   onclick="setStatus('BREAKING')">  <div class="context-swatch"></div>Breaking</div>
+</div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────
+// Edit these to match your sheet structure.
+const REGIONS = [
+  'CORNWALL', 'COV & WAR', 'DEVON', 'DORSET',
+  'GLOUCESTER', 'HER & WOR', 'SOMERSET', 'SWINDON',
+  'THE WEST', 'WILTSHIRE'
+];
+
+const AM_SLOTS = ['0600','0700','0800','0900','1000','1100','1200','1300'];
+const PM_SLOTS = ['1400','1500','1600','1700','1800','1900','2000','2100'];
+
+// Cycle order on left-click
+const STATUS_CYCLE = ['PENDING','READY','REDISPATCH','DISPATCHED','BREAKING'];
+const STATUS_CLASS  = { PENDING:'pending', READY:'ready', REDISPATCH:'redispatch', DISPATCHED:'dispatched', BREAKING:'breaking' };
+const STATUS_LABEL  = { PENDING:'Pending', READY:'Ready', REDISPATCH:'Redispatch', DISPATCHED:'Dispatched', BREAKING:'Breaking' };
+
+// ─── STATE ─────────────────────────────────────────────────────────
+let SCRIPT_URL = localStorage.getItem('bulletinScriptUrl') || '';
+let currentShift = 'PM';
+let data = {};       // { "CORNWALL|1400": "DISPATCHED", ... }
+let pendingCell = null;  // { region, slot } for context menu
+let syncTimer = null;
+let pollTimer = null;
+
+// ─── INIT ──────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  updateClock();
+  setInterval(updateClock, 1000);
+  updateShiftUI();
+  buildGrid();
+
+  if (SCRIPT_URL) {
+    document.getElementById('configBanner').style.display = 'none';
+    document.getElementById('scriptUrl').value = SCRIPT_URL;
+    fetchData();
+    startPolling();
+  } else {
+    document.getElementById('loadingScreen').style.display = 'none';
+  }
+
+  document.addEventListener('click', () => closeContextMenu());
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeContextMenu(); });
+});
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+}
+
+// ─── SHIFT ─────────────────────────────────────────────────────────
+function setShift(s) {
+  currentShift = s;
+  document.getElementById('btnAM').classList.toggle('active', s === 'AM');
+  document.getElementById('btnPM').classList.toggle('active', s === 'PM');
+  updateShiftUI();
+  buildGrid();
+  renderCells();
+}
+
+function updateShiftUI() {}
+
+function slots() { return currentShift === 'AM' ? AM_SLOTS : PM_SLOTS; }
+
+// ─── GRID BUILD ────────────────────────────────────────────────────
+function buildGrid() {
+  const grid = document.getElementById('bulletinGrid');
+  const s = slots();
+  grid.style.setProperty('--slot-count', s.length);
+  grid.innerHTML = '';
+
+  // Header row
+  grid.appendChild(el('div', 'grid-corner'));
+  s.forEach(slot => {
+    const h = el('div', 'slot-header');
+    h.textContent = slot;
+    grid.appendChild(h);
+  });
+
+  // Data rows
+  REGIONS.forEach(region => {
+    const lbl = el('div', 'region-label');
+    const nm = el('div', 'region-name');
+    nm.textContent = region;
+    lbl.appendChild(nm);
+    grid.appendChild(lbl);
+
+    s.forEach(slot => {
+      const key = region + '|' + slot;
+      const status = (data[key] || 'DISPATCHED').toUpperCase();
+      const cell = el('div', 'bulletin-cell ' + (STATUS_CLASS[status] || 'dispatched'));
+      cell.dataset.key = key;
+      cell.dataset.region = region;
+      cell.dataset.slot = slot;
+
+      const timeEl = el('div','cell-time'); timeEl.textContent = slot;
+      const statEl = el('div','cell-status'); statEl.textContent = STATUS_LABEL[status] || status;
+      cell.appendChild(timeEl);
+      cell.appendChild(statEl);
+
+      cell.addEventListener('click',  e => { e.stopPropagation(); cycleStatus(key, cell); });
+      cell.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); openContextMenu(e, key, region, slot); });
+
+      grid.appendChild(cell);
+    });
+  });
+}
+
+function renderCells() {
+  document.querySelectorAll('.bulletin-cell').forEach(cell => {
+    const key    = cell.dataset.key;
+    const status = (data[key] || 'DISPATCHED').toUpperCase();
+    const cls    = STATUS_CLASS[status] || 'dispatched';
+    cell.className = 'bulletin-cell ' + cls;
+    cell.querySelector('.cell-status').textContent = STATUS_LABEL[status] || status;
+  });
+}
+
+function el(tag, cls) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  return e;
+}
+
+// ─── STATUS CHANGE ─────────────────────────────────────────────────
+function cycleStatus(key, cell) {
+  const current = (data[key] || 'DISPATCHED').toUpperCase();
+  const idx = STATUS_CYCLE.indexOf(current);
+  const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+  applyStatus(key, next, cell);
+}
+
+function applyStatus(key, status, cell) {
+  data[key] = status;
+  const cls = STATUS_CLASS[status] || 'dispatched';
+  if (!cell) cell = document.querySelector('[data-key="' + key + '"]');
+  if (cell) {
+    cell.className = 'bulletin-cell ' + cls + ' saving';
+    cell.querySelector('.cell-status').textContent = STATUS_LABEL[status];
+    setTimeout(() => cell.classList.remove('saving'), 800);
+  }
+  pushUpdate(key, status);
+}
+
+// ─── CONTEXT MENU ──────────────────────────────────────────────────
+function openContextMenu(e, key, region, slot) {
+  pendingCell = { key, region, slot };
+  const menu = document.getElementById('contextMenu');
+  document.getElementById('contextTitle').textContent = region + ' · ' + slot;
+  menu.classList.add('visible');
+  const x = Math.min(e.clientX, window.innerWidth  - 200);
+  const y = Math.min(e.clientY, window.innerHeight - 240);
+  menu.style.left = x + 'px';
+  menu.style.top  = y + 'px';
+}
+
+function closeContextMenu() {
+  document.getElementById('contextMenu').classList.remove('visible');
+  pendingCell = null;
+}
+
+function setStatus(status) {
+  if (!pendingCell) return;
+  applyStatus(pendingCell.key, status);
+  closeContextMenu();
+}
+
+// ─── RESET ─────────────────────────────────────────────────────────
+function confirmReset() {
+  if (!confirm('Reset ALL bulletins to DISPATCHED for this shift?')) return;
+  slots().forEach(slot => {
+    REGIONS.forEach(region => {
+      const key = region + '|' + slot;
+      data[key] = 'DISPATCHED';
+    });
+  });
+  renderCells();
+  pushReset();
+}
+
+// ─── SYNC ──────────────────────────────────────────────────────────
+function setSyncState(state, label) {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  dot.className = 'sync-dot' + (state === 'syncing' ? ' syncing' : state === 'error' ? ' error' : '');
+  lbl.textContent = label;
+}
+
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(fetchData, 15000); // every 15s
+}
+
+async function fetchData() {
+  if (!SCRIPT_URL) return;
+  setSyncState('syncing', 'Syncing…');
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=get', { cache: 'no-store' });
+    const json = await res.json();
+    if (json.data) {
+      data = json.data;
+      renderCells();
+      const now = new Date();
+      setSyncState('ok', 'Synced ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0'));
+    }
+    document.getElementById('loadingScreen').style.display = 'none';
+  } catch(err) {
+    setSyncState('error', 'Sync failed');
+    document.getElementById('loadingScreen').style.display = 'none';
+    console.error(err);
+  }
+}
+
+async function pushUpdate(key, status) {
+  if (!SCRIPT_URL) return;
+  setSyncState('syncing','Saving…');
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'set', key, status })
+    });
+    setSyncState('ok','Saved');
+  } catch(err) {
+    setSyncState('error','Save failed');
+  }
+}
+
+async function pushReset() {
+  if (!SCRIPT_URL) return;
+  const resetData = {};
+  slots().forEach(slot => REGIONS.forEach(region => { resetData[region+'|'+slot] = 'DISPATCHED'; }));
+  setSyncState('syncing','Resetting…');
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'reset', data: resetData })
+    });
+    setSyncState('ok','Reset done');
+  } catch(err) {
+    setSyncState('error','Reset failed');
+  }
+}
+
+// ─── CONFIG ────────────────────────────────────────────────────────
+function saveUrl() {
+  const url = document.getElementById('scriptUrl').value.trim();
+  if (!url.startsWith('https://script.google.com')) {
+    alert('That doesn\'t look like a Google Apps Script URL — check and try again.');
+    return;
+  }
+  SCRIPT_URL = url;
+  localStorage.setItem('bulletinScriptUrl', url);
+  document.getElementById('configBanner').style.display = 'none';
+  fetchData();
+  startPolling();
+}
+</script>
+</body>
+</html>
