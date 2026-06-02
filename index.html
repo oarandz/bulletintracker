@@ -969,16 +969,10 @@ function setShift(s) {
   document.getElementById('btnAM').classList.toggle('active', s==='AM');
   document.getElementById('btnPM').classList.toggle('active', s==='PM');
   buildGrid();
+  if (mobileMode) { buildMobileHourBar(); renderMobile(); }
 }
 
 function slots() { return shift === 'AM' ? AM_SLOTS : PM_SLOTS; }
-
-// Re-render mobile bar on shift change
-const _origSetShift = setShift;
-function setShift(s) {
-  _origSetShift(s);
-  if (mobileMode) { buildMobileHourBar(); renderMobile(); }
-}
 
 function setMode(m) {
   mode = m;
@@ -1057,6 +1051,9 @@ function renderCells() {
     const stripe = cell.querySelector('.prev-stripe');
     if (stripe) stripe.className = 'prev-stripe ' + (prev ? (CLS[prev] || 'none') : 'none');
   });
+
+  // Always sync mobile view if active
+  if (mobileMode) renderMobile();
 }
 
 function cycleStatus(key, cell) {
@@ -1263,13 +1260,6 @@ function renderMobile() {
     row.appendChild(cell);
     list.appendChild(row);
   });
-}
-
-// Hook renderMobile into renderCells so poll updates are reflected
-const _origRenderCells = renderCells;
-function renderCells() {
-  _origRenderCells();
-  if (mobileMode) renderMobile();
 }
 
 // ── HELP MODAL ───────────────────────────────
