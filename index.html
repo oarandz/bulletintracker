@@ -1016,22 +1016,35 @@ async function pushUpdate(key, status) {
 async function pushReset() {
   saving = true;
   setSync('syncing','Resetting…');
-  // Build reset payload for only current hub+shift
-  const rd = {};
-  slots().forEach(slot => REGIONS.forEach(region => { rd[region+'|'+slot] = 'PENDING'; }));
+
+  // Send each key as individual set calls so the sheet only updates these keys
+  // and doesn't wipe unrelated hub/shift data
+  const keys = [];
+  slots().forEach(slot => REGIONS.forEach(region => {
+    keys.push(region + '|' + slot);
+  }));
+
+  // Lock all keys immediately before any async work
+  const lockUntil = Date.now() + 30000;
+  keys.forEach(k => lockedKeys.set(k, lockUntil));
+
   try {
-    const res  = await fetch(SCRIPT_URL + '?action=reset&data=' + encodeURIComponent(JSON.stringify(rd)), { cache:'no-store' });
-    const json = await res.json();
-    if (json.ok) { setSync('ok','Reset done'); }
-    else { throw new Error(json.error); }
-  } catch(err) { setSync('error','Reset failed'); }
-  finally {
+    // Send all resets in parallel
+    const fetches = keys.map(k =>
+      fetch(SCRIPT_URL + '?action=set&key=' + encodeURIComponent(k) + '&status=PENDING', { cache:'no-store' })
+    );
+    await Promise.all(fetches);
+    setSync('ok','Reset done');
+
+    // Extend lock after confirmed saves
+    const lockUntil2 = Date.now() + 15000;
+    keys.forEach(k => lockedKeys.set(k, lockUntil2));
+  } catch(err) {
+    setSync('error','Reset failed');
+    // Release locks on failure
+    keys.forEach(k => lockedKeys.delete(k));
+  } finally {
     saving = false;
-    // Re-lock all reset keys for 12s so poll doesn't immediately overwrite
-    const now = Date.now();
-    slots().forEach(slot => REGIONS.forEach(region => {
-      lockedKeys.set(region + '|' + slot, now + 12000);
-    }));
   }
 }
 </script>
