@@ -937,22 +937,23 @@ function setHub(hubKey) {
 }
 
 function initialiseCountdownMode() {
-  // Work out which mode is appropriate right now and set it immediately
   const now = new Date();
   const secsIntoHour = now.getMinutes() * 60 + now.getSeconds();
-  const deadlineSecs = Math.max(0, 50 * 60 - secsIntoHour);
+  const deadlineExpired = (50 * 60 - secsIntoHour) <= 0;
 
   const boothInfo = getBoothCountdown(now);
-  const boothSecs = boothInfo ? boothInfo.secsLeft : null;
 
-  if (boothSecs !== null && boothSecs > 0) {
-    // Booth countdown is active — show booth mode
+  if (!boothInfo) {
+    // No next slot (end of day) — show deadline
+    countdownMode = 'deadline';
+  } else if (!boothInfo.expired) {
+    // Booth entry hasn't happened yet — count down to it
     countdownMode = 'booth';
-  } else if (deadlineSecs > 0) {
-    // Booth time has passed but deadline hasn't — show deadline
+  } else if (!deadlineExpired) {
+    // Booth entry passed, deadline not yet — should be in booth recording
     countdownMode = 'deadline';
   } else {
-    // Both passed — booth for next hour
+    // Both passed — counting down to next hour's booth
     countdownMode = 'booth';
   }
   updateClock();
@@ -1029,17 +1030,18 @@ function getBoothCountdown(now) {
     else if (status === 'REDISPATCH') { totalSecs += 10; count++; }
   });
 
-  // Booth entry = :50 minus total recording time
+  // Booth entry = :50 minus total recording time (seconds past the hour)
   const boothSecsPastHour = 50 * 60 - totalSecs;
-
-  // Seconds until booth entry
-  const secsIntoHour = now.getMinutes() * 60 + now.getSeconds();
-  let secsLeft = boothSecsPastHour - secsIntoHour;
-  if (secsLeft < 0) secsLeft += 3600;
-
   const boothMinutePastHour = Math.floor(boothSecsPastHour / 60);
 
-  return { secsLeft, totalSecs, boothMinutePastHour, count, nextSlot };
+  const secsIntoHour = now.getMinutes() * 60 + now.getSeconds();
+  const rawSecsLeft = boothSecsPastHour - secsIntoHour;
+  // expired = booth entry time already passed this hour
+  const expired = rawSecsLeft <= 0;
+  // wrap for display only
+  const secsLeft = expired ? rawSecsLeft + 3600 : rawSecsLeft;
+
+  return { secsLeft, rawSecsLeft, expired, totalSecs, boothMinutePastHour, count, nextSlot };
 }
 
 function updateClock() {
