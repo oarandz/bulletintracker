@@ -488,6 +488,28 @@ body {
   transform: translateX(4px);
 }
 
+/* ── MOBILE TOPBAR ──────────────────────────── */
+@media (max-width: 768px) {
+  .topbar { padding: 0 10px; height: 48px; }
+  .hub-sub { display: none; }
+  .hub-name { font-size: 13px; }
+}
+
+.topbar.mobile-topbar {
+  padding: 0 10px;
+  height: 48px;
+}
+.topbar.mobile-topbar .hub-sub { display: none; }
+.topbar.mobile-topbar .hub-name { font-size: 14px; letter-spacing: 0.5px; }
+.topbar.mobile-topbar .topbar-reset { display: none; }
+.topbar.mobile-topbar #mobileToggleBtn { display: none; }
+.topbar.mobile-topbar .mode-toggle { display: flex; }
+.topbar.mobile-topbar .topbar-right { gap: 10px; }
+.topbar.mobile-topbar .clock { display: none; }
+.topbar.mobile-topbar .sync-pill { display: none; }
+.topbar.mobile-topbar .countdown-label { font-size: 8px; }
+.topbar.mobile-topbar .countdown-val { font-size: 20px; min-width: 50px; }
+
 /* ── MOBILE VIEW ────────────────────────────── */
 .mobile-btn {
   background: rgba(255,255,255,0.07);
@@ -718,8 +740,7 @@ body {
       <div class="hub-sub">Bulletin Tracker</div>
     </div>
     <div class="shift-toggle">
-      <button class="shift-btn" id="btnAM" onclick="setShift('AM')">AM</button>
-      <button class="shift-btn active" id="btnPM" onclick="setShift('PM')">PM</button>
+      <button class="shift-btn active" id="shiftBtn" onclick="cycleShift()">PM</button>
     </div>
     <div class="mode-toggle">
       <button class="mode-btn active" id="btnCreation" onclick="setMode('creation')">CRE</button>
@@ -902,6 +923,7 @@ function setHub(hubKey) {
     document.getElementById('mobileToggleBtn').classList.add('active');
     document.getElementById('gridWrap').style.display = 'none';
     document.getElementById('mobileWrap').classList.add('show');
+    document.querySelector('.topbar').classList.add('mobile-topbar');
   }
 
   initialFetchDone = false; // reset so first fetch rebuilds grid with real data
@@ -962,10 +984,14 @@ function updateClock() {
 
 function setShift(s) {
   shift = s;
-  document.getElementById('btnAM').classList.toggle('active', s==='AM');
-  document.getElementById('btnPM').classList.toggle('active', s==='PM');
+  const btn = document.getElementById('shiftBtn');
+  if (btn) btn.textContent = s;
   buildGrid();
   if (mobileMode) { buildMobileHourBar(); renderMobile(); }
+}
+
+function cycleShift() {
+  setShift(shift === 'AM' ? 'PM' : 'AM');
 }
 
 function slots() { return shift === 'AM' ? AM_SLOTS : PM_SLOTS; }
@@ -1152,6 +1178,7 @@ function toggleMobileView() {
   document.getElementById('mobileToggleBtn').classList.toggle('active', mobileMode);
   document.getElementById('gridWrap').style.display = mobileMode ? 'none' : 'flex';
   document.getElementById('mobileWrap').classList.toggle('show', mobileMode);
+  document.querySelector('.topbar').classList.toggle('mobile-topbar', mobileMode);
   if (mobileMode) {
     buildMobileHourBar();
     renderMobile();
@@ -1336,7 +1363,10 @@ async function fetchData() {
       if (!initialFetchDone) {
         initialFetchDone = true;
         buildGrid();
-        if (mobileMode) { buildMobileHourBar(); renderMobile(); }
+        if (mobileMode) {
+          // Small defer so DOM is fully visible before rendering
+          setTimeout(() => { buildMobileHourBar(); renderMobile(); }, 50);
+        }
       } else {
         renderCells();
       }
