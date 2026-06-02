@@ -699,6 +699,13 @@ body {
     <button onclick="setHub('sw')" class="hub-pick-btn">South &amp; West Hub</button>
     <button onclick="setHub('se')" class="hub-pick-btn">South &amp; East Hub</button>
     <button onclick="setHub('nm')" class="hub-pick-btn">North &amp; Midlands Hub</button>
+
+    <!-- View toggle -->
+    <div style="display:flex;gap:0;background:#111;border:1px solid #2a2a2a;border-radius:6px;overflow:hidden;margin-top:8px;">
+      <button id="pickDesktop" onclick="pickView('desktop')" style="flex:1;background:#4700A3;border:none;color:#fff;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;padding:10px;cursor:pointer;transition:all 0.15s;">&#128444; Desktop</button>
+      <button id="pickMobile"  onclick="pickView('mobile')"  style="flex:1;background:none;border:none;color:rgba(255,255,255,0.4);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;padding:10px;cursor:pointer;transition:all 0.15s;">&#9741; Mobile</button>
+    </div>
+    <div style="font-family:'Outfit',sans-serif;font-size:11px;color:#333;text-align:center;margin-top:-6px;">Select view, then choose your hub above</div>
   </div>
 </div>
 
@@ -864,6 +871,21 @@ let REGIONS = [];
 let REGION_FULL = {};
 let NATION_REGIONS = new Set();
 
+let pickedView = 'desktop'; // set by hub picker
+
+function pickView(v) {
+  pickedView = v;
+  const dBtn = document.getElementById('pickDesktop');
+  const mBtn = document.getElementById('pickMobile');
+  if (v === 'desktop') {
+    dBtn.style.background = '#4700A3'; dBtn.style.color = '#fff';
+    mBtn.style.background = 'none';    mBtn.style.color = 'rgba(255,255,255,0.4)';
+  } else {
+    mBtn.style.background = '#1FD1BD'; mBtn.style.color = '#000';
+    dBtn.style.background = 'none';    dBtn.style.color = 'rgba(255,255,255,0.4)';
+  }
+}
+
 function setHub(hubKey) {
   activeHub = hubKey;
   const hub = HUBS[hubKey];
@@ -873,9 +895,23 @@ function setHub(hubKey) {
   document.getElementById('hubName').textContent = hub.name;
   document.getElementById('hubPicker').style.display = 'none';
   document.getElementById('appShell').style.display = 'flex';
+
+  // Apply view choice from picker
+  if (pickedView === 'mobile') {
+    mobileMode = true;
+    document.getElementById('mobileToggleBtn').classList.add('active');
+    document.getElementById('gridWrap').style.display = 'none';
+    document.getElementById('mobileWrap').classList.add('show');
+  }
+
   buildGrid();
   fetchData();
   setInterval(fetchData, 10000);
+
+  if (pickedView === 'mobile') {
+    buildMobileHourBar();
+    renderMobile();
+  }
 }
 
 const AM_SLOTS = ['0600','0700','0800','0900','1000','1100','1200','1300'];
