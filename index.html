@@ -800,12 +800,15 @@ function buildGrid() {
 
     slots().forEach(slot => {
       const key    = region + '|' + slot;
-      const status = (data[key] || 'PENDING').toUpperCase();
+      const raw    = (data[key] || 'PENDING');
+      const parts  = raw.split(':');
+      const status = parts[0].toUpperCase();
+      const prev   = parts[1] ? parts[1].toUpperCase() : null;
       const cell   = document.createElement('div');
       cell.className = 'cell ' + (CLS[status] || 'pending');
       cell.dataset.key = key;
 
-      const stripe = document.createElement('div'); stripe.className='prev-stripe ' + (prevData[key] || 'none');
+      const stripe = document.createElement('div'); stripe.className='prev-stripe ' + (prev ? (CLS[prev]||'none') : (prevData[key]||'none'));
       const curl = document.createElement('div'); curl.className='note-curl'; curl.style.display = notes[key] ? 'block' : 'none';
       curl.addEventListener('click', e => { e.stopPropagation(); openNoteModal(key, region, slot); });
       const t = document.createElement('div'); t.className='cell-time';   t.textContent = slot;
@@ -815,7 +818,9 @@ function buildGrid() {
       cell.addEventListener('click', e => {
         e.stopPropagation();
         if (mode === 'delivery') {
-          applyStatus(key, 'DISPATCHED', cell);
+          const raw = (data[key] || 'PENDING');
+          const cur = raw.split(':')[0].toUpperCase();
+          if (cur !== 'DISPATCHED') applyStatus(key, 'DISPATCHED', cell);
         } else {
           cycleStatus(key, cell);
         }
@@ -834,40 +839,63 @@ function renderCells() {
     const key  = cell.dataset.key;
     const slot = key.split('|')[1];
     if (!slots().includes(slot)) return;
-    if (lockedKeys.has(key) && now < lockedKeys.get(key)) return; // locked — don't overwrite
+    if (lockedKeys.has(key) && now < lockedKeys.get(key)) return;
     lockedKeys.delete(key);
-    const status = (data[key] || 'PENDING').toUpperCase();
-    cell.className = 'cell ' + (CLS[status]||'pending');
-    cell.querySelector('.cell-status').textContent = LABEL[status]||status;
+
+    const raw    = (data[key] || 'PENDING');
+    const parts  = raw.split(':');
+    const status = parts[0].toUpperCase();
+    const prev   = parts[1] ? parts[1].toUpperCase() : null;
+
+    cell.className = 'cell ' + (CLS[status] || 'pending');
+    cell.querySelector('.cell-status').textContent = LABEL[status] || status;
+
     const stripe = cell.querySelector('.prev-stripe');
-    if (stripe) { stripe.className = 'prev-stripe ' + (prevData[key] || 'none'); }
+    if (stripe) {
+      stripe.className = 'prev-stripe ' + (prev ? (CLS[prev] || 'none') : 'none');
+    }
   });
 }
 
 function cycleStatus(key, cell) {
-  const current = (data[key] || 'PENDING').toUpperCase();
-  const next = CYCLE[(CYCLE.indexOf(current) + 1) % CYCLE.length];
+  const raw     = (data[key] || 'PENDING');
+  const current = raw.split(':')[0].toUpperCase();
+  const next    = CYCLE[(CYCLE.indexOf(current) + 1) % CYCLE.length];
   applyStatus(key, next, cell);
 }
 
 function applyStatus(key, status, cell) {
-  // Track previous status for the stripe
-  const prev = (data[key] || 'PENDING').toUpperCase();
+  // Work out raw stored value — may be 'DISPATCHED:READY' etc.
+  const rawCurrent = data[key] || 'PENDING';
+  const currentStatus = rawCurrent.split(':')[0].toUpperCase();
+
+  let storedValue = status; // what we write to sheet
+  let stripeClass = 'none';
+
   if (status === 'DISPATCHED') {
-    if (prev !== 'DISPATCHED') prevData[key] = CLS[prev] || 'none';
-  } else {
-    prevData[key] = 'none'; // clear stripe when not dispatched
+    // Encode previous state into stored value so other devices can read it
+    if (currentStatus !== 'DISPATCHED') {
+      storedValue = 'DISPATCHED:' + currentStatus;
+    } else {
+      // Already dispatched — preserve existing stripe
+      storedValue = rawCurrent;
+    }
+    stripeClass = CLS[storedValue.split(':')[1]] || 'none';
   }
-  data[key] = status;
-  lockedKeys.set(key, Date.now() + 8000); // lock for 8s — covers save round-trip + sheet propagation
+
+  data[key] = storedValue;
+  prevData[key] = stripeClass;
+  lockedKeys.set(key, Date.now() + 8000);
+
   if (!cell) cell = document.querySelector('[data-key="' + key + '"]');
   if (cell) {
-    cell.className = 'cell ' + (CLS[status]||'pending');
-    cell.querySelector('.cell-status').textContent = LABEL[status];
+    cell.className = 'cell dispatched';
+    if (status !== 'DISPATCHED') cell.className = 'cell ' + (CLS[status] || 'pending');
+    cell.querySelector('.cell-status').textContent = LABEL[status] || status;
     const stripe = cell.querySelector('.prev-stripe');
-    if (stripe) { stripe.className = 'prev-stripe ' + (prevData[key] || 'none'); }
+    if (stripe) stripe.className = 'prev-stripe ' + stripeClass;
   }
-  pushUpdate(key, status);
+  pushUpdate(key, storedValue);
 }
 
 function openCtx(e, key, region, slot) {
