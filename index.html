@@ -466,6 +466,28 @@ body {
   margin-top: 1px;
 }
 
+.hub-pick-btn {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  color: #ccc;
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 16px 24px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+  width: 100%;
+}
+.hub-pick-btn:hover {
+  background: #4700A3;
+  border-color: #4700A3;
+  color: #fff;
+  transform: translateX(4px);
+}
+
 /* ── CONTEXT MENU ───────────────────────────── */
 .ctx {
   position: fixed;
@@ -509,10 +531,31 @@ body {
 </head>
 <body>
 
+<!-- Hub Picker -->
+<div id="hubPicker" style="
+  position:fixed;inset:0;background:#0a0a0a;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:32px;z-index:500;
+">
+  <div style="text-align:center;">
+    <div style="font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#555;margin-bottom:8px;">Bauer Media Audio</div>
+    <div style="font-family:'Outfit',sans-serif;font-size:36px;font-weight:900;letter-spacing:1px;color:#fff;">Bulletin Tracker</div>
+    <div style="font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;color:#444;margin-top:6px;letter-spacing:1px;">Select your hub to continue</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:12px;width:320px;">
+    <button onclick="setHub('sw')" class="hub-pick-btn">South &amp; West Hub</button>
+    <button onclick="setHub('se')" class="hub-pick-btn">South &amp; East Hub</button>
+    <button onclick="setHub('nm')" class="hub-pick-btn">North &amp; Midlands Hub</button>
+  </div>
+</div>
+
+<!-- App shell (hidden until hub selected) -->
+<div id="appShell" style="display:none;flex-direction:column;height:100vh;">
 <div class="topbar">
   <div class="topbar-left">
     <div class="hub-block">
-      <div class="hub-name">South &amp; West Hub</div>
+      <div class="hub-name" id="hubName">South &amp; West Hub</div>
       <div class="hub-sub">Bulletin Tracker</div>
     </div>
     <div class="shift-toggle">
@@ -620,16 +663,62 @@ body {
     </div>
   </div>
 </div>
+</div><!-- /appShell -->
 
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZwDASG4UAeC15TUj4KOfBnvsHSc2PWELBN4sicIbcKu0GUjSV0f_Qr4u2D3qFKGoo6A/exec';
 
-const REGIONS = [
-  'CORNWALL','COV & WAR','DEVON','DORSET',
-  'GLOUCESTER','HER & WOR','SOMERSET','SWINDON',
-  'THE WEST','WILTSHIRE'
-];
-const NATION_REGIONS = new Set(['CORNWALL','DEVON','DORSET','SOMERSET']);
+const HUBS = {
+  sw: {
+    name: 'South & West Hub',
+    regions: ['CWL','C&W','DEV','DOR','GLO','H&W','SOM','SWI','WST','WIL'],
+    full: {
+      'CWL':'Cornwall','C&W':'Coventry & Warwickshire','DEV':'Devon','DOR':'Dorset',
+      'GLO':'Gloucester','H&W':'Hereford & Worcester','SOM':'Somerset','SWI':'Swindon',
+      'WST':'The West','WIL':'Wiltshire'
+    },
+    nation: new Set(['CWL','DEV','DOR','SOM'])
+  },
+  se: {
+    name: 'South & East Hub',
+    regions: ['BRK','BBH','CMB','ESX','NHT','NFK','OXF','SUF','SUR','SUS'],
+    full: {
+      'BRK':'Berkshire','BBH':'Beds, Bucks & Herts','CMB':'Cambridgeshire',
+      'ESX':'Essex','NHT':'Northamptonshire','NFK':'Norfolk',
+      'OXF':'Oxfordshire','SUF':'Suffolk','SUR':'Surrey','SUS':'Sussex'
+    },
+    nation: new Set(['SUF','SUS'])
+  },
+  nm: {
+    name: 'North & Midlands Hub',
+    regions: ['BCS','CMB','EYRK','LAN','LIN','NYRK','PSR','S&C'],
+    full: {
+      'BCS':'Birmingham, Coventry & Solihull','CMB':'Cambridgeshire',
+      'EYRK':'East Yorkshire','LAN':'Lancashire','LIN':'Lincolnshire',
+      'NYRK':'North Yorkshire','PSR':'Peterborough','S&C':'Stoke & Cheshire'
+    },
+    nation: new Set(['EYRK'])
+  }
+};
+
+let activeHub = null;
+let REGIONS = [];
+let REGION_FULL = {};
+let NATION_REGIONS = new Set();
+
+function setHub(hubKey) {
+  activeHub = hubKey;
+  const hub = HUBS[hubKey];
+  REGIONS = hub.regions;
+  REGION_FULL = hub.full;
+  NATION_REGIONS = hub.nation;
+  document.getElementById('hubName').textContent = hub.name;
+  document.getElementById('hubPicker').style.display = 'none';
+  document.getElementById('appShell').style.display = 'flex';
+  buildGrid();
+  fetchData();
+  setInterval(fetchData, 1000);
+}
 
 const AM_SLOTS = ['0600','0700','0800','0900','1000','1100','1200','1300'];
 const PM_SLOTS = ['1400','1500','1600','1700','1800','1900'];
@@ -651,9 +740,6 @@ const lockedKeys = new Map(); // key -> timestamp, immune to poll overwrites whi
 window.addEventListener('DOMContentLoaded', () => {
   updateClock();
   setInterval(updateClock, 1000);
-  buildGrid();
-  fetchData();
-  setInterval(fetchData, 1000);
   document.addEventListener('click', closeCtx);
   document.addEventListener('keydown', e => { if(e.key==='Escape') closeCtx(); });
 });
@@ -703,6 +789,7 @@ function buildGrid() {
     const lbl = document.createElement('div');
     lbl.className = 'region-lbl';
     lbl.textContent = region;
+    lbl.title = REGION_FULL[region] || region;
     if (NATION_REGIONS.has(region)) {
       const nb = document.createElement('span');
       nb.className = 'nation-badge';
