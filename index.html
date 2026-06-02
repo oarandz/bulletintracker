@@ -1021,12 +1021,13 @@ function getBoothCountdown(now) {
   //   REDISPATCH = 10 seconds each
   //   DISPATCHED = 0
   let totalSecs = 0;
-  let count = 0;
+  let count = 0;      // all bulletins affecting time
+  let freshCount = 0; // only PENDING/READY/BREAKING shown in label
   REGIONS.forEach(region => {
     const key = region + '|' + nextSlot;
     const raw = (data[key] || 'PENDING');
     const status = raw.split(':')[0].toUpperCase();
-    if (['PENDING','READY','BREAKING'].includes(status)) { totalSecs += 120; count++; }
+    if (['PENDING','READY','BREAKING'].includes(status)) { totalSecs += 120; count++; freshCount++; }
     else if (status === 'REDISPATCH') { totalSecs += 10; count++; }
   });
 
@@ -1041,7 +1042,7 @@ function getBoothCountdown(now) {
   // wrap for display only
   const secsLeft = expired ? rawSecsLeft + 3600 : rawSecsLeft;
 
-  return { secsLeft, rawSecsLeft, expired, totalSecs, boothMinutePastHour, count, nextSlot };
+  return { secsLeft, rawSecsLeft, expired, totalSecs, boothMinutePastHour, count, freshCount, nextSlot };
 }
 
 function updateClock() {
