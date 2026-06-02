@@ -1024,7 +1024,7 @@ function getBoothCountdown(now) {
   let count = 0;      // all bulletins affecting time
   let freshCount = 0; // only PENDING/READY/BREAKING shown in label
   REGIONS.forEach(region => {
-    const key = region + '|' + nextSlot;
+    const key = activeHub + ':' + region + '|' + nextSlot;
     const raw = (data[key] || 'PENDING');
     const status = raw.split(':')[0].toUpperCase();
     if (['PENDING','READY','BREAKING'].includes(status)) { totalSecs += 120; count++; freshCount++; }
@@ -1130,7 +1130,7 @@ function buildGrid() {
     row.appendChild(lbl);
 
     slots().forEach(slot => {
-      const key    = region + '|' + slot;
+      const key    = activeHub + ':' + region + '|' + slot;
       const raw    = (data[key] || 'PENDING');
       const parts  = raw.split(':');
       const status = parts[0].toUpperCase();
@@ -1255,7 +1255,7 @@ function confirmReset() {
 
   // Only reset keys for the current hub + shift
   slots().forEach(slot => REGIONS.forEach(region => {
-    const key = region + '|' + slot;
+    const key = activeHub + ':' + region + '|' + slot;
     data[key] = 'PENDING';
     notes[key] = '';
     prevData[key] = 'none';
@@ -1323,7 +1323,7 @@ function renderMobile() {
   list.innerHTML = '';
 
   REGIONS.forEach(region => {
-    const key    = region + '|' + mobileSlot;
+    const key    = activeHub + ':' + region + '|' + mobileSlot;
     const raw    = data[key] || 'PENDING';
     const parts  = raw.split(':');
     const status = parts[0].toUpperCase();
@@ -1529,7 +1529,7 @@ async function pushReset() {
   // and doesn't wipe unrelated hub/shift data
   const keys = [];
   slots().forEach(slot => REGIONS.forEach(region => {
-    keys.push(region + '|' + slot);
+    keys.push(activeHub + ':' + region + '|' + slot);
   }));
 
   // Mark all keys dirty immediately so poll doesn't overwrite during reset
