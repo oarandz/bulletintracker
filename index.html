@@ -992,30 +992,31 @@ function getBoothCountdown(now) {
   const nextSlot = getNextSlot();
   if (!nextSlot) return null;
 
-  // Count bulletins needing recording: PENDING, READY, BREAKING (not REDISPATCH, not DISPATCHED)
-  const countable = new Set(['PENDING', 'READY', 'BREAKING']);
+  // Tally recording time:
+  //   PENDING / READY / BREAKING = 2 mins each
+  //   REDISPATCH = 10 seconds each
+  //   DISPATCHED = 0
+  let totalSecs = 0;
   let count = 0;
   REGIONS.forEach(region => {
     const key = region + '|' + nextSlot;
     const raw = (data[key] || 'PENDING');
     const status = raw.split(':')[0].toUpperCase();
-    if (countable.has(status)) count++;
+    if (['PENDING','READY','BREAKING'].includes(status)) { totalSecs += 120; count++; }
+    else if (status === 'REDISPATCH') { totalSecs += 10; count++; }
   });
 
-  // Recording time = 2 mins per bulletin
-  const recordingMins = count * 2;
+  // Booth entry = :50 minus total recording time
+  const boothSecsPastHour = 50 * 60 - totalSecs;
 
-  // Booth entry = :50 minus recording time
-  // e.g. 10 mins recording → enter at :40
-  const boothMinutePastHour = 50 - recordingMins;
-
-  // Seconds until booth entry time (within the current/next hour)
+  // Seconds until booth entry
   const secsIntoHour = now.getMinutes() * 60 + now.getSeconds();
-  const boothTargetSecs = boothMinutePastHour * 60;
-  let secsLeft = boothTargetSecs - secsIntoHour;
+  let secsLeft = boothSecsPastHour - secsIntoHour;
   if (secsLeft < 0) secsLeft += 3600;
 
-  return { secsLeft, recordingMins, boothMinutePastHour, count, nextSlot };
+  const boothMinutePastHour = Math.floor(boothSecsPastHour / 60);
+
+  return { secsLeft, totalSecs, boothMinutePastHour, count, nextSlot };
 }
 
 function updateClock() {
