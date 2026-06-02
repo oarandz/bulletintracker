@@ -933,6 +933,29 @@ function setHub(hubKey) {
   buildGrid(); // build skeleton immediately (all pending) so screen isn't blank
   fetchData(); // will rebuild again once data arrives
   setInterval(fetchData, 10000);
+  initialiseCountdownMode();
+}
+
+function initialiseCountdownMode() {
+  // Work out which mode is appropriate right now and set it immediately
+  const now = new Date();
+  const secsIntoHour = now.getMinutes() * 60 + now.getSeconds();
+  const deadlineSecs = Math.max(0, 50 * 60 - secsIntoHour);
+
+  const boothInfo = getBoothCountdown(now);
+  const boothSecs = boothInfo ? boothInfo.secsLeft : null;
+
+  if (boothSecs !== null && boothSecs > 0) {
+    // Booth countdown is active — show booth mode
+    countdownMode = 'booth';
+  } else if (deadlineSecs > 0) {
+    // Booth time has passed but deadline hasn't — show deadline
+    countdownMode = 'deadline';
+  } else {
+    // Both passed — booth for next hour
+    countdownMode = 'booth';
+  }
+  updateClock();
 }
 
 const AM_SLOTS = ['0600','0700','0800','0900','1000','1100','1200','1300'];
