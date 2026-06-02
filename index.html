@@ -153,6 +153,9 @@ body {
 .countdown-val.ok     { color: #1FD1BD; }
 .countdown-val.soon   { color: #FFAA00; }
 .countdown-val.urgent { color: #FF3300; animation: urgentPulse 0.5s ease-in-out infinite; }
+.countdown-val.booth  { color: #C084FC; }
+.countdown-val.booth-soon   { color: #FFAA00; }
+.countdown-val.booth-urgent { color: #FF3300; animation: urgentPulse 0.5s ease-in-out infinite; }
 @keyframes urgentPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
 .clock {
@@ -752,8 +755,8 @@ body {
   </div>
   <div class="topbar-right">
     <div class="countdown-wrap">
-      <div class="countdown-label">Next :50 in</div>
-      <div class="countdown-val ok" id="countdown">0:00</div>
+      <div class="countdown-label" id="countdownLabel" style="cursor:pointer;" onclick="toggleCountdownMode()" title="Click to switch mode">Next :50 in</div>
+      <div class="countdown-val ok" id="countdown" style="cursor:pointer;" onclick="toggleCountdownMode()">0:00</div>
     </div>
     <div class="clock" id="clock">00:00</div>
     <div class="sync-pill">
@@ -962,24 +965,102 @@ window.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown', e => { if(e.key==='Escape') closeCtx(); });
 });
 
+let countdownMode = 'deadline'; // 'deadline' | 'booth'
+
+function toggleCountdownMode() {
+  countdownMode = countdownMode === 'deadline' ? 'booth' : 'deadline';
+  updateClock();
+}
+
+function getNextSlot() {
+  // Find the next bulletin slot after the current time
+  const now = new Date();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  const allSlots = [...AM_SLOTS, ...PM_SLOTS];
+  // Convert slot strings to minutes
+  for (const s of allSlots) {
+    const slotH = parseInt(s.slice(0, 2));
+    const slotMins = slotH * 60;
+    if (slotMins > nowMins) return s;
+  }
+  return null;
+}
+
+function getBoothCountdown(now) {
+  if (!activeHub) return null;
+
+  const nextSlot = getNextSlot();
+  if (!nextSlot) return null;
+
+  // Count bulletins needing recording: PENDING, READY, BREAKING (not REDISPATCH, not DISPATCHED)
+  const countable = new Set(['PENDING', 'READY', 'BREAKING']);
+  let count = 0;
+  REGIONS.forEach(region => {
+    const key = region + '|' + nextSlot;
+    const raw = (data[key] || 'PENDING');
+    const status = raw.split(':')[0].toUpperCase();
+    if (countable.has(status)) count++;
+  });
+
+  // Recording time = 2 mins per bulletin
+  const recordingMins = count * 2;
+
+  // Booth entry = :50 minus recording time
+  // e.g. 10 mins recording → enter at :40
+  const boothMinutePastHour = 50 - recordingMins;
+
+  // Seconds until booth entry time (within the current/next hour)
+  const secsIntoHour = now.getMinutes() * 60 + now.getSeconds();
+  const boothTargetSecs = boothMinutePastHour * 60;
+  let secsLeft = boothTargetSecs - secsIntoHour;
+  if (secsLeft < 0) secsLeft += 3600;
+
+  return { secsLeft, recordingMins, boothMinutePastHour, count, nextSlot };
+}
+
 function updateClock() {
   const now = new Date();
   const h = String(now.getHours()).padStart(2,'0');
   const m = String(now.getMinutes()).padStart(2,'0');
   const s = now.getSeconds();
-  const ss2 = String(s).padStart(2,'0');
-  document.getElementById('clock').textContent = h + ':' + m + ':' + ss2;
+  document.getElementById('clock').textContent = h + ':' + m + ':' + String(s).padStart(2,'0');
 
-  const secsIntoHour = now.getMinutes() * 60 + s;
-  const target = 50 * 60;
-  let secsLeft = target - secsIntoHour;
-  if (secsLeft < 0) secsLeft += 3600;
+  const el    = document.getElementById('countdown');
+  const label = document.getElementById('countdownLabel');
 
-  const mm = String(Math.floor(secsLeft / 60));
-  const ss = String(secsLeft % 60).padStart(2,'0');
-  const el = document.getElementById('countdown');
-  el.textContent = mm + ':' + ss;
-  el.className = 'countdown-val ' + (secsLeft <= 120 ? 'urgent' : secsLeft <= 300 ? 'soon' : 'ok');
+  if (countdownMode === 'booth') {
+    const info = getBoothCountdown(now);
+    if (!info || !activeHub) {
+      // Fall back if no hub selected yet
+      label.textContent = 'Booth in';
+      el.textContent = '--:--';
+      el.className = 'countdown-val booth';
+      return;
+    }
+
+    const { secsLeft, count, boothMinutePastHour, nextSlot } = info;
+    const mm = String(Math.floor(secsLeft / 60));
+    const ss = String(secsLeft % 60).padStart(2,'0');
+    el.textContent = mm + ':' + ss;
+
+    // Label shows what this is based on
+    const entryMin = boothMinutePastHour < 0 ? 0 : boothMinutePastHour;
+    label.textContent = '▶ Booth (:' + String(entryMin).padStart(2,'0') + ', ' + count + ' buls)';
+
+    el.className = 'countdown-val ' + (secsLeft <= 120 ? 'booth-urgent' : secsLeft <= 300 ? 'booth-soon' : 'booth');
+  } else {
+    // Standard :50 countdown
+    const secsIntoHour = now.getMinutes() * 60 + s;
+    const target = 50 * 60;
+    let secsLeft = target - secsIntoHour;
+    if (secsLeft < 0) secsLeft += 3600;
+
+    const mm = String(Math.floor(secsLeft / 60));
+    const ss = String(secsLeft % 60).padStart(2,'0');
+    el.textContent = mm + ':' + ss;
+    label.textContent = 'Next :50 in';
+    el.className = 'countdown-val ' + (secsLeft <= 120 ? 'urgent' : secsLeft <= 300 ? 'soon' : 'ok');
+  }
 }
 
 function setShift(s) {
