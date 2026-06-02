@@ -735,10 +735,13 @@ let notes = {}; // key -> note string
 let pendingCell = null;
 let noteTargetKey = null;
 
-// Per-key save queue — ensures rapid clicks on the same cell
-// are serialised and only the latest value is written
-const saveQueues = {};   // key -> { latestValue, promise }
-const lockedKeys = new Map(); // key -> expiry timestamp
+// Per-key save queue — ensures rapid clicks on same cell are serialised
+const saveQueues = {};
+
+// dirtyKeys: keys THIS device has changed and not yet confirmed by a poll
+// Only this device's changes are protected from poll overwrites
+// Other devices' changes come in freely via poll
+const dirtyKeys = new Set();
 
 window.addEventListener('DOMContentLoaded', () => {
   updateClock();
@@ -837,13 +840,10 @@ function buildGrid() {
 }
 
 function renderCells() {
-  const now = Date.now();
   document.querySelectorAll('.cell[data-key]').forEach(cell => {
     const key  = cell.dataset.key;
     const slot = key.split('|')[1];
     if (!slots().includes(slot)) return;
-    if (lockedKeys.has(key) && now < lockedKeys.get(key)) return;
-    lockedKeys.delete(key);
 
     const raw    = (data[key] || 'PENDING');
     const parts  = raw.split(':');
@@ -854,9 +854,7 @@ function renderCells() {
     cell.querySelector('.cell-status').textContent = LABEL[status] || status;
 
     const stripe = cell.querySelector('.prev-stripe');
-    if (stripe) {
-      stripe.className = 'prev-stripe ' + (prev ? (CLS[prev] || 'none') : 'none');
-    }
+    if (stripe) stripe.className = 'prev-stripe ' + (prev ? (CLS[prev] || 'none') : 'none');
   });
 }
 
@@ -888,7 +886,7 @@ function applyStatus(key, status, cell) {
 
   data[key] = storedValue;
   prevData[key] = stripeClass;
-  lockedKeys.set(key, Date.now() + 8000);
+  dirtyKeys.add(key); // protect from poll overwrite until save confirms
 
   if (!cell) cell = document.querySelector('[data-key="' + key + '"]');
   if (cell) {
@@ -1018,12 +1016,10 @@ async function fetchData() {
     const res  = await fetch(SCRIPT_URL + '?action=get', { cache:'no-store' });
     const json = await res.json();
     if (json.data) {
-      const now = Date.now();
       Object.keys(json.data).forEach(k => {
-        // Only update data if key isn't locked (i.e. we have a pending/recent save for it)
-        if (!lockedKeys.has(k) || now >= lockedKeys.get(k)) {
+        // Only skip if this device has an in-flight save for this key
+        if (!dirtyKeys.has(k)) {
           data[k] = json.data[k];
-          lockedKeys.delete(k);
         }
       });
       renderCells();
@@ -1048,26 +1044,25 @@ function pushUpdate(key, status) {
 
 async function _doSave(key, status) {
   setSync('syncing', 'Saving…');
-  // Lock this key for the duration of the save + propagation time
-  lockedKeys.set(key, Date.now() + 15000);
   try {
     const url = SCRIPT_URL + '?action=set&key=' + encodeURIComponent(key) + '&status=' + encodeURIComponent(status);
     const res  = await fetch(url, { cache: 'no-store' });
     const json = await res.json();
     if (!json.ok) throw new Error(json.error || 'Unknown error');
     setSync('ok', 'Saved');
-    // Keep locked for 10s after confirmed save — gives sheet time to propagate
-    lockedKeys.set(key, Date.now() + 10000);
   } catch(err) {
     setSync('error', 'Save failed');
-    // On failure, release lock so the poll can restore the true sheet value
-    lockedKeys.delete(key);
+    // On failure clear dirty so poll restores true sheet value
+    dirtyKeys.delete(key);
   } finally {
     const queued = saveQueues[key];
     delete saveQueues[key];
-    // If a newer value came in while we were saving, send it now
     if (queued && queued.next !== null) {
+      // Another change queued — send it, keep dirty
       pushUpdate(key, queued.next);
+    } else {
+      // Save complete, no more queued changes — release dirty so poll confirms
+      dirtyKeys.delete(key);
     }
   }
 }
@@ -1082,9 +1077,8 @@ async function pushReset() {
     keys.push(region + '|' + slot);
   }));
 
-  // Lock all keys immediately before any async work
-  const lockUntil = Date.now() + 30000;
-  keys.forEach(k => lockedKeys.set(k, lockUntil));
+  // Mark all keys dirty immediately so poll doesn't overwrite during reset
+  keys.forEach(k => dirtyKeys.add(k));
 
   try {
     // Send all resets in parallel
@@ -1094,12 +1088,11 @@ async function pushReset() {
     await Promise.all(fetches);
     setSync('ok','Reset done');
 
-    // Extend lock after confirmed saves
-    const lockUntil2 = Date.now() + 15000;
-    keys.forEach(k => lockedKeys.set(k, lockUntil2));
+    // Release dirty — saves confirmed, poll can now read fresh values
+    keys.forEach(k => dirtyKeys.delete(k));
   } catch(err) {
     setSync('error','Reset failed');
-    keys.forEach(k => lockedKeys.delete(k));
+    keys.forEach(k => dirtyKeys.delete(k));
   }
 }
 </script>
