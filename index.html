@@ -734,8 +734,11 @@ let prevData = {}; // tracks previous status before dispatch
 let notes = {}; // key -> note string
 let pendingCell = null;
 let noteTargetKey = null;
-let saving = false;
-const lockedKeys = new Map(); // key -> timestamp, immune to poll overwrites while saving
+
+// Per-key save queue — ensures rapid clicks on the same cell
+// are serialised and only the latest value is written
+const saveQueues = {};   // key -> { latestValue, promise }
+const lockedKeys = new Map(); // key -> expiry timestamp
 
 window.addEventListener('DOMContentLoaded', () => {
   updateClock();
@@ -1015,34 +1018,61 @@ async function fetchData() {
     const res  = await fetch(SCRIPT_URL + '?action=get', { cache:'no-store' });
     const json = await res.json();
     if (json.data) {
-      data = json.data;
+      const now = Date.now();
+      Object.keys(json.data).forEach(k => {
+        // Only update data if key isn't locked (i.e. we have a pending/recent save for it)
+        if (!lockedKeys.has(k) || now >= lockedKeys.get(k)) {
+          data[k] = json.data[k];
+          lockedKeys.delete(k);
+        }
+      });
       renderCells();
-      const now = new Date();
-      setSync('ok', String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0'));
+      const t = new Date();
+      setSync('ok', String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+':'+String(t.getSeconds()).padStart(2,'0'));
     }
   } catch(err) { setSync('error','Sync failed'); }
 }
 
-async function pushUpdate(key, status) {
-  saving = true;
-  setSync('syncing','Saving…');
-  try {
-    const res  = await fetch(SCRIPT_URL + '?action=set&key=' + encodeURIComponent(key) + '&status=' + encodeURIComponent(status), { cache:'no-store' });
-    const json = await res.json();
-    if (json.ok) {
-      setSync('ok','Saved');
-      // Keep lock for 3 more seconds so sheet has time to propagate before poll reads it
-      lockedKeys.set(key, Date.now() + 3000);
-    } else { throw new Error(json.error); }
-  } catch(err) {
-    setSync('error','Save failed');
-    lockedKeys.delete(key); // unlock on error so user can retry
+// Queued save — if a save is already in flight for this key,
+// we just update the queued value; the in-flight save will
+// fire another request with the latest value when it lands.
+function pushUpdate(key, status) {
+  if (saveQueues[key]) {
+    // A save is already in flight — just update what we want to send next
+    saveQueues[key].next = status;
+    return;
   }
-  finally { saving = false; }
+  saveQueues[key] = { next: null };
+  _doSave(key, status);
+}
+
+async function _doSave(key, status) {
+  setSync('syncing', 'Saving…');
+  // Lock this key for the duration of the save + propagation time
+  lockedKeys.set(key, Date.now() + 15000);
+  try {
+    const url = SCRIPT_URL + '?action=set&key=' + encodeURIComponent(key) + '&status=' + encodeURIComponent(status);
+    const res  = await fetch(url, { cache: 'no-store' });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'Unknown error');
+    setSync('ok', 'Saved');
+    // Keep locked for 10s after confirmed save — gives sheet time to propagate
+    lockedKeys.set(key, Date.now() + 10000);
+  } catch(err) {
+    setSync('error', 'Save failed');
+    // On failure, release lock so the poll can restore the true sheet value
+    lockedKeys.delete(key);
+  } finally {
+    const queued = saveQueues[key];
+    delete saveQueues[key];
+    // If a newer value came in while we were saving, send it now
+    if (queued && queued.next !== null) {
+      pushUpdate(key, queued.next);
+    }
+  }
 }
 
 async function pushReset() {
-  saving = true;
   setSync('syncing','Resetting…');
 
   // Send each key as individual set calls so the sheet only updates these keys
@@ -1069,10 +1099,7 @@ async function pushReset() {
     keys.forEach(k => lockedKeys.set(k, lockUntil2));
   } catch(err) {
     setSync('error','Reset failed');
-    // Release locks on failure
     keys.forEach(k => lockedKeys.delete(k));
-  } finally {
-    saving = false;
   }
 }
 </script>
