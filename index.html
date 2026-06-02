@@ -717,7 +717,7 @@ function setHub(hubKey) {
   document.getElementById('appShell').style.display = 'flex';
   buildGrid();
   fetchData();
-  setInterval(fetchData, 1000);
+  setInterval(fetchData, 10000);
 }
 
 const AM_SLOTS = ['0600','0700','0800','0900','1000','1100','1200','1300'];
@@ -893,15 +893,23 @@ function setStatus(status) {
 }
 
 function confirmReset() {
-  if (!confirm('Reset ALL bulletins to PENDING and clear all notes for this shift?')) return;
+  const hubName = HUBS[activeHub] ? HUBS[activeHub].name : 'this hub';
+  if (!confirm('Reset ALL ' + shift + ' bulletins to PENDING for ' + hubName + ' and clear all notes?')) return;
+
+  // Only reset keys for the current hub + shift
   slots().forEach(slot => REGIONS.forEach(region => {
-    const key = region+'|'+slot;
+    const key = region + '|' + slot;
     data[key] = 'PENDING';
     notes[key] = '';
     prevData[key] = 'none';
   }));
-  // Hide all note curls
-  document.querySelectorAll('.note-curl').forEach(c => c.style.display = 'none');
+
+  // Hide note curls only for current cells
+  document.querySelectorAll('.cell[data-key]').forEach(cell => {
+    const curl = cell.querySelector('.note-curl');
+    if (curl) curl.style.display = 'none';
+  });
+
   renderCells();
   pushReset();
 }
@@ -1008,15 +1016,23 @@ async function pushUpdate(key, status) {
 async function pushReset() {
   saving = true;
   setSync('syncing','Resetting…');
+  // Build reset payload for only current hub+shift
   const rd = {};
-  slots().forEach(slot => REGIONS.forEach(region => { rd[region+'|'+slot]='PENDING'; }));
+  slots().forEach(slot => REGIONS.forEach(region => { rd[region+'|'+slot] = 'PENDING'; }));
   try {
     const res  = await fetch(SCRIPT_URL + '?action=reset&data=' + encodeURIComponent(JSON.stringify(rd)), { cache:'no-store' });
     const json = await res.json();
     if (json.ok) { setSync('ok','Reset done'); }
     else { throw new Error(json.error); }
   } catch(err) { setSync('error','Reset failed'); }
-  finally { saving = false; }
+  finally {
+    saving = false;
+    // Re-lock all reset keys for 12s so poll doesn't immediately overwrite
+    const now = Date.now();
+    slots().forEach(slot => REGIONS.forEach(region => {
+      lockedKeys.set(region + '|' + slot, now + 12000);
+    }));
+  }
 }
 </script>
 </body>
