@@ -904,14 +904,10 @@ function setHub(hubKey) {
     document.getElementById('mobileWrap').classList.add('show');
   }
 
-  buildGrid();
-  fetchData();
+  initialFetchDone = false; // reset so first fetch rebuilds grid with real data
+  buildGrid(); // build skeleton immediately (all pending) so screen isn't blank
+  fetchData(); // will rebuild again once data arrives
   setInterval(fetchData, 10000);
-
-  if (pickedView === 'mobile') {
-    buildMobileHourBar();
-    renderMobile();
-  }
 }
 
 const AM_SLOTS = ['0600','0700','0800','0900','1000','1100','1200','1300'];
@@ -1324,18 +1320,26 @@ document.addEventListener('keydown', e => {
   }
 });
 
+let initialFetchDone = false;
+
 async function fetchData() {
   try {
     const res  = await fetch(SCRIPT_URL + '?action=get', { cache:'no-store' });
     const json = await res.json();
     if (json.data) {
       Object.keys(json.data).forEach(k => {
-        // Only skip if this device has an in-flight save for this key
         if (!dirtyKeys.has(k)) {
           data[k] = json.data[k];
         }
       });
-      renderCells();
+      // On first load, rebuild grid so cells are created with correct data
+      if (!initialFetchDone) {
+        initialFetchDone = true;
+        buildGrid();
+        if (mobileMode) { buildMobileHourBar(); renderMobile(); }
+      } else {
+        renderCells();
+      }
       const t = new Date();
       setSync('ok', String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+':'+String(t.getSeconds()).padStart(2,'0'));
     }
