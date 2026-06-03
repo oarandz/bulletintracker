@@ -1016,7 +1016,7 @@ function setHub(hubKey) {
   buildGrid(); // build skeleton immediately (all pending) so screen isn't blank
   showDataLoading();
   fetchData(); // will rebuild again once data arrives
-  setInterval(fetchData, 10000);
+  setInterval(fetchData, 3000);
   initialiseCountdownMode();
 }
 
@@ -1045,10 +1045,28 @@ let noteTargetKey = null;
 // Per-key save queue — ensures rapid clicks on same cell are serialised
 const saveQueues = {};
 
-// dirtyKeys: keys THIS device has changed and not yet confirmed by a poll
-// Only this device's changes are protected from poll overwrites
-// Other devices' changes come in freely via poll
-const dirtyKeys = new Set();
+// dirtyKeys: key -> expiry timestamp
+// A key is only protected for the duration of its own save request + a small buffer
+// Once expired the sheet value always wins — guarantees convergence across devices
+const dirtyKeys = new Map();
+
+function markDirty(key) {
+  // Protect for 8 seconds max — covers slow Apps Script response + sheet propagation
+  dirtyKeys.set(key, Date.now() + 8000);
+}
+
+function isDirty(key) {
+  if (!dirtyKeys.has(key)) return false;
+  if (Date.now() > dirtyKeys.get(key)) {
+    clearDirty(key); // expired — sheet wins
+    return false;
+  }
+  return true;
+}
+
+function clearDirty(key) {
+  clearDirty(key);
+}
 
 let countdownMode = 'booth'; // auto-managed by getCycleInfo
 
@@ -1307,7 +1325,7 @@ function applyStatus(key, status, cell) {
 
   data[key] = storedValue;
   prevData[key] = stripeClass;
-  dirtyKeys.add(key); // protect from poll overwrite until save confirms
+  markDirty(key);s
 
   if (!cell) cell = document.querySelector('[data-key="' + key + '"]');
   if (cell) {
@@ -1576,7 +1594,7 @@ async function fetchData() {
     const json = await res.json();
     if (json.data) {
       Object.keys(json.data).forEach(k => {
-        if (!dirtyKeys.has(k)) {
+        if (!isDirty(k)) {
           data[k] = json.data[k];
         }
       });
@@ -1619,19 +1637,15 @@ async function _doSave(key, status) {
     const json = await res.json();
     if (!json.ok) throw new Error(json.error || 'Unknown error');
     setSync('ok', 'Saved');
+    clearDirty(key); // save confirmed — let next poll verify from sheet
   } catch(err) {
     setSync('error', 'Save failed');
-    // On failure clear dirty so poll restores true sheet value
-    dirtyKeys.delete(key);
+    clearDirty(key); // on failure, sheet value wins immediately
   } finally {
     const queued = saveQueues[key];
     delete saveQueues[key];
     if (queued && queued.next !== null) {
-      // Another change queued — send it, keep dirty
-      pushUpdate(key, queued.next);
-    } else {
-      // Save complete, no more queued changes — release dirty so poll confirms
-      dirtyKeys.delete(key);
+      pushUpdate(key, queued.next); // another change queued, send it
     }
   }
 }
@@ -1644,7 +1658,7 @@ async function pushReset() {
     keys.push(activeHub + ':' + region + '|' + slot);
   }));
 
-  keys.forEach(k => dirtyKeys.add(k));
+  keys.forEach(k => markDirty(k));
 
   const batch = {};
   keys.forEach(k => { batch[k] = 'PENDING'; });
@@ -1655,10 +1669,10 @@ async function pushReset() {
     const json = await res.json();
     if (json.ok) { setSync('ok','Reset done'); }
     else { throw new Error(json.error || 'Unknown'); }
-    keys.forEach(k => dirtyKeys.delete(k));
+    keys.forEach(k => clearDirty(k));
   } catch(err) {
     setSync('error','Reset failed');
-    keys.forEach(k => dirtyKeys.delete(k));
+    keys.forEach(k => clearDirty(k));
   }
 }
 </script>
