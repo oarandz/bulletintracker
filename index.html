@@ -665,6 +665,70 @@ body {
   z-index: 2;
 }
 
+/* ── LOADING OVERLAY ────────────────────────── */
+.data-loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10,10,10,0.85);
+  z-index: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  transition: opacity 0.4s;
+}
+.data-loading-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.data-loading-box {
+  background: #1a1a2e;
+  border: 1px solid #2a2a3e;
+  border-radius: 10px;
+  padding: 32px 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 340px;
+}
+
+.data-loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #2a2a3e;
+  border-top-color: #1FD1BD;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.data-loading-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.3px;
+}
+
+.data-loading-sub {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: #555;
+  line-height: 1.5;
+}
+
+.data-loading-refresh {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: #333;
+  line-height: 1.5;
+  transition: color 0.3s;
+}
+.data-loading-refresh.show { color: #666; }
+
 /* ── CONTEXT MENU ───────────────────────────── */
 .ctx {
   position: fixed;
@@ -852,6 +916,15 @@ body {
   <div class="mobile-hour-bar" id="mobileHourBar"></div>
   <div class="mobile-list" id="mobileList"></div>
 </div>
+<!-- Data loading overlay -->
+<div class="data-loading-overlay hidden" id="dataLoadingOverlay">
+  <div class="data-loading-box">
+    <div class="data-loading-spinner"></div>
+    <div class="data-loading-title">Loading bulletin data…</div>
+    <div class="data-loading-sub">Fetching the latest states from the sheet.<br>This usually takes a few seconds.</div>
+    <div class="data-loading-refresh" id="dataLoadingRefresh">Taking too long? <a href="javascript:location.reload()" style="color:#1FD1BD;text-decoration:none;">Refresh the page</a></div>
+  </div>
+</div>
 </div><!-- /appShell -->
 
 <script>
@@ -941,6 +1014,7 @@ function setHub(hubKey) {
 
   initialFetchDone = false; // reset so first fetch rebuilds grid with real data
   buildGrid(); // build skeleton immediately (all pending) so screen isn't blank
+  showDataLoading();
   fetchData(); // will rebuild again once data arrives
   setInterval(fetchData, 10000);
   initialiseCountdownMode();
@@ -1412,6 +1486,26 @@ function renderMobile() {
   });
 }
 
+// ── DATA LOADING OVERLAY ─────────────────────
+let dataLoadingTimer = null;
+
+function showDataLoading() {
+  const overlay = document.getElementById('dataLoadingOverlay');
+  const refresh = document.getElementById('dataLoadingRefresh');
+  overlay.classList.remove('hidden');
+  refresh.classList.remove('show');
+  // Show refresh hint after 5 seconds
+  dataLoadingTimer = setTimeout(() => refresh.classList.add('show'), 5000);
+}
+
+function hideDataLoading() {
+  const overlay = document.getElementById('dataLoadingOverlay');
+  overlay.classList.add('hidden');
+  if (dataLoadingTimer) { clearTimeout(dataLoadingTimer); dataLoadingTimer = null; }
+  // Remove from DOM after fade completes
+  setTimeout(() => { overlay.style.display = 'none'; }, 450);
+}
+
 // ── HELP MODAL ───────────────────────────────
 function openHelp() {
   document.getElementById('helpOverlay').classList.add('show');
@@ -1490,6 +1584,7 @@ async function fetchData() {
       if (!initialFetchDone) {
         initialFetchDone = true;
         buildGrid();
+        hideDataLoading();
         if (mobileMode) {
           // Small defer so DOM is fully visible before rendering
           setTimeout(() => { buildMobileHourBar(); renderMobile(); }, 50);
