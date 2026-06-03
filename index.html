@@ -1050,23 +1050,6 @@ const saveQueues = {};
 // Once expired the sheet value always wins — guarantees convergence across devices
 const dirtyKeys = new Map();
 
-function markDirty(key) {
-  // Protect for 8 seconds max — covers slow Apps Script response + sheet propagation
-  dirtyKeys.set(key, Date.now() + 8000);
-}
-
-function isDirty(key) {
-  if (!dirtyKeys.has(key)) return false;
-  if (Date.now() > dirtyKeys.get(key)) {
-    clearDirty(key); // expired — sheet wins
-    return false;
-  }
-  return true;
-}
-
-function clearDirty(key) {
-  clearDirty(key);
-}
 
 let countdownMode = 'booth'; // auto-managed by getCycleInfo
 
@@ -1325,7 +1308,7 @@ function applyStatus(key, status, cell) {
 
   data[key] = storedValue;
   prevData[key] = stripeClass;
-  markDirty(key);s
+  pendingSaves.set(key, { value: storedValue, savedAt: Date.now() });s
 
   if (!cell) cell = document.querySelector('[data-key="' + key + '"]');
   if (cell) {
@@ -1594,7 +1577,19 @@ async function fetchData() {
     const json = await res.json();
     if (json.data) {
       Object.keys(json.data).forEach(k => {
-        if (!isDirty(k)) {
+        if (pendingSaves.has(k)) {
+          const ps = pendingSaves.get(k);
+          // If sheet now shows our saved value, confirm and unlock
+          if (json.data[k] === ps.value) {
+            pendingSaves.delete(k);
+            data[k] = json.data[k];
+          } else if (Date.now() - ps.savedAt > 12000) {
+            // Timed out — sheet wins
+            pendingSaves.delete(k);
+            data[k] = json.data[k];
+          }
+          // else: save still in flight, keep local value
+        } else {
           data[k] = json.data[k];
         }
       });
@@ -1637,10 +1632,13 @@ async function _doSave(key, status) {
     const json = await res.json();
     if (!json.ok) throw new Error(json.error || 'Unknown error');
     setSync('ok', 'Saved');
-    clearDirty(key); // save confirmed — let next poll verify from sheet
+    // Keep in pendingSaves so poll can confirm sheet matches before unlocking
+    if (pendingSaves.has(key)) {
+      pendingSaves.set(key, { value: pendingSaves.get(key).value, savedAt: Date.now() });
+    }
   } catch(err) {
     setSync('error', 'Save failed');
-    clearDirty(key); // on failure, sheet value wins immediately
+    pendingSaves.delete(key); // on failure, sheet value wins immediately
   } finally {
     const queued = saveQueues[key];
     delete saveQueues[key];
@@ -1658,7 +1656,7 @@ async function pushReset() {
     keys.push(activeHub + ':' + region + '|' + slot);
   }));
 
-  keys.forEach(k => markDirty(k));
+  keys.forEach(k => pendingSaves.set(k, { value: 'PENDING', savedAt: Date.now() }));
 
   const batch = {};
   keys.forEach(k => { batch[k] = 'PENDING'; });
@@ -1669,10 +1667,10 @@ async function pushReset() {
     const json = await res.json();
     if (json.ok) { setSync('ok','Reset done'); }
     else { throw new Error(json.error || 'Unknown'); }
-    keys.forEach(k => clearDirty(k));
+    keys.forEach(k => pendingSaves.delete(k));
   } catch(err) {
     setSync('error','Reset failed');
-    keys.forEach(k => clearDirty(k));
+    keys.forEach(k => pendingSaves.delete(k));
   }
 }
 </script>
