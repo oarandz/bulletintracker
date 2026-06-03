@@ -855,6 +855,16 @@ body {
 </div><!-- /appShell -->
 
 <script>
+window.addEventListener('DOMContentLoaded', () => {
+  updateClock();
+  setInterval(updateClock, 1000);
+  document.addEventListener('click', closeCtx);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeCtx(); closeNoteModal(); closeHelp(); }
+    if (e.key === 'Enter' && e.metaKey && document.getElementById('noteOverlay').classList.contains('show')) saveNote();
+  });
+});
+
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZwDASG4UAeC15TUj4KOfBnvsHSc2PWELBN4sicIbcKu0GUjSV0f_Qr4u2D3qFKGoo6A/exec';
 
 const HUBS = {
@@ -983,8 +993,10 @@ function getCycleInfo(now) {
     deadlineAbs = deadlineH * 3600 + 50 * 60;
   }
 
-  // Bulletin slot = deadlineH:00 (e.g. deadline 16:50 -> bulletins for 1700)
-  const bulletinSlot = String(deadlineH).padStart(2,'0') + '00';
+  // Bulletin slot = the hour AFTER the deadline
+  // e.g. deadline at 09:50 means we're preparing the 10:00 bulletins
+  const bulletinH = deadlineH + 1;
+  const bulletinSlot = String(bulletinH).padStart(2,'0') + '00';
   if (![...AM_SLOTS, ...PM_SLOTS].includes(bulletinSlot)) return null; // end of broadcast day
 
   // Count recording time for that slot
@@ -1017,10 +1029,6 @@ function initialiseCountdownMode() {
   updateClock();
 }
 
-// Returns the current cycle info:
-// - Find next :50 deadline that hasn't passed
-// - Bulletin slot = slot at that deadline hour
-// - Phase: 'booth' (counting to booth entry) or 'deadline' (counting to :50)
 function getCycleInfo(now) {
   const nowAbs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
 
@@ -1032,8 +1040,10 @@ function getCycleInfo(now) {
     deadlineAbs = deadlineH * 3600 + 50 * 60;
   }
 
-  // Bulletin slot = deadlineH:00 (e.g. deadline 16:50 -> bulletins for 1700)
-  const bulletinSlot = String(deadlineH).padStart(2,'0') + '00';
+  // Bulletin slot = the hour AFTER the deadline
+  // e.g. deadline at 09:50 means we're preparing the 10:00 bulletins
+  const bulletinH = deadlineH + 1;
+  const bulletinSlot = String(bulletinH).padStart(2,'0') + '00';
   if (![...AM_SLOTS, ...PM_SLOTS].includes(bulletinSlot)) return null; // end of broadcast day
 
   // Count recording time for that slot
@@ -1058,40 +1068,6 @@ function getCycleInfo(now) {
   return { bulletinSlot, deadlineH, secsToDeadline, secsToBooth, boothMinPastHour, freshCount, phase };
 }
 
-function getBoothCountdown(now) {
-  if (!activeHub) return null;
-
-  const nextSlot = getNextSlot();
-  if (!nextSlot) return null;
-
-  // Tally recording time:
-  //   PENDING / READY / BREAKING = 2 mins each
-  //   REDISPATCH = 10 seconds each
-  //   DISPATCHED = 0
-  let totalSecs = 0;
-  let count = 0;      // all bulletins affecting time
-  let freshCount = 0; // only PENDING/READY/BREAKING shown in label
-  REGIONS.forEach(region => {
-    const key = activeHub + ':' + region + '|' + nextSlot;
-    const raw = (data[key] || 'PENDING');
-    const status = raw.split(':')[0].toUpperCase();
-    if (['PENDING','READY','BREAKING'].includes(status)) { totalSecs += 120; count++; freshCount++; }
-    else if (status === 'REDISPATCH') { totalSecs += 10; count++; }
-  });
-
-  // Booth entry = :50 minus total recording time (seconds past the hour)
-  const boothSecsPastHour = 50 * 60 - totalSecs;
-  const boothMinutePastHour = Math.floor(boothSecsPastHour / 60);
-
-  const secsIntoHour = now.getMinutes() * 60 + now.getSeconds();
-  const rawSecsLeft = boothSecsPastHour - secsIntoHour;
-  // expired = booth entry time already passed this hour
-  const expired = rawSecsLeft <= 0;
-  // wrap for display only
-  const secsLeft = expired ? rawSecsLeft + 3600 : rawSecsLeft;
-
-  return { secsLeft, rawSecsLeft, expired, totalSecs, boothMinutePastHour, count, freshCount, nextSlot };
-}
 
 function updateClock() {
   const now = new Date();
@@ -1103,38 +1079,33 @@ function updateClock() {
   const el    = document.getElementById('countdown');
   const label = document.getElementById('countdownLabel');
 
+  const cycle = activeHub ? getCycleInfo(now) : null;
+
+  if (!cycle) {
+    el.textContent = '--:--';
+    label.textContent = 'Off air';
+    el.className = 'countdown-val ok';
+    return;
+  }
+
+  // Auto-switch based on cycle phase
+  countdownMode = cycle.phase;
+
   if (countdownMode === 'booth') {
-    const info = getBoothCountdown(now);
-    if (!info || !activeHub) {
-      // Fall back if no hub selected yet
-      label.textContent = 'Booth in';
-      el.textContent = '--:--';
-      el.className = 'countdown-val booth';
-      return;
-    }
-
-    const { secsLeft, count, boothMinutePastHour, nextSlot } = info;
-    const mm = String(Math.floor(secsLeft / 60));
-    const ss = String(secsLeft % 60).padStart(2,'0');
-    el.textContent = mm + ':' + ss;
-
-    // Label shows what this is based on
-    const entryMin = boothMinutePastHour < 0 ? 0 : boothMinutePastHour;
-    label.textContent = '▶ Booth (:' + String(entryMin).padStart(2,'0') + ', ' + count + ' buls)';
-
-    el.className = 'countdown-val ' + (secsLeft <= 120 ? 'booth-urgent' : secsLeft <= 300 ? 'booth-soon' : 'booth');
+    const secs = cycle.secsToBooth;
+    const mm = String(Math.floor(secs / 60));
+    const ss2 = String(secs % 60).padStart(2,'0');
+    el.textContent = mm + ':' + ss2;
+    const entryMin = Math.max(0, cycle.boothMinPastHour);
+    label.textContent = '▶ Booth (:' + String(entryMin).padStart(2,'0') + ', ' + cycle.freshCount + ' buls)';
+    el.className = 'countdown-val ' + (secs <= 120 ? 'booth-urgent' : secs <= 300 ? 'booth-soon' : 'booth');
   } else {
-    // Standard :50 countdown
-    const secsIntoHour = now.getMinutes() * 60 + s;
-    const target = 50 * 60;
-    let secsLeft = target - secsIntoHour;
-    if (secsLeft < 0) secsLeft += 3600;
-
-    const mm = String(Math.floor(secsLeft / 60));
-    const ss = String(secsLeft % 60).padStart(2,'0');
-    el.textContent = mm + ':' + ss;
-    label.textContent = 'Next :50 in';
-    el.className = 'countdown-val ' + (secsLeft <= 120 ? 'urgent' : secsLeft <= 300 ? 'soon' : 'ok');
+    const secs = cycle.secsToDeadline;
+    const mm = String(Math.floor(secs / 60));
+    const ss2 = String(secs % 60).padStart(2,'0');
+    el.textContent = mm + ':' + ss2;
+    label.textContent = 'Deadline :50';
+    el.className = 'countdown-val ' + (secs <= 120 ? 'urgent' : secs <= 300 ? 'soon' : 'ok');
   }
 }
 
