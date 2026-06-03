@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>South &amp; West Hub Bulletins</title>
+<title>Bulletin Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-
 :root {
   --pending:    #CC1100;
   --ready:      #1A6B28;
@@ -17,820 +16,286 @@
   --dispatched: #1A1A1A;
   --breaking:   #A07800;
 }
+body { background: #0a0a0a; font-family: 'DM Sans', sans-serif; height: 100vh; overflow: hidden; }
 
-body {
-  background: #f0f0f0;
-  font-family: 'DM Sans', sans-serif;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+/* ── HUB PICKER ─────────────────────────── */
+#hubPicker {
+  position: fixed; inset: 0; background: #0a0a0a;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 32px; z-index: 500;
 }
+.pick-title-sub { font-family:'Outfit',sans-serif; font-size:11px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#555; margin-bottom:8px; }
+.pick-title     { font-family:'Outfit',sans-serif; font-size:36px; font-weight:900; color:#fff; }
+.pick-subtitle  { font-family:'Outfit',sans-serif; font-size:13px; color:#444; letter-spacing:1px; margin-top:6px; }
+.pick-buttons   { display:flex; flex-direction:column; gap:12px; width:320px; }
+.hub-pick-btn {
+  background:#1a1a1a; border:1px solid #2a2a2a; border-radius:6px; color:#ccc;
+  font-family:'Outfit',sans-serif; font-size:16px; font-weight:700; padding:16px 24px;
+  cursor:pointer; text-align:left; transition:all 0.15s; width:100%;
+}
+.hub-pick-btn:hover { background:#4700A3; border-color:#4700A3; color:#fff; transform:translateX(4px); }
+.pick-view-toggle {
+  display:flex; background:#111; border:1px solid #2a2a2a; border-radius:6px;
+  overflow:hidden; margin-top:8px;
+}
+.pick-view-btn {
+  flex:1; background:none; border:none; color:rgba(255,255,255,0.4);
+  font-family:'Outfit',sans-serif; font-size:13px; font-weight:700;
+  padding:10px; cursor:pointer; transition:all 0.15s;
+}
+.pick-view-btn.active-desktop { background:#4700A3; color:#fff; }
+.pick-view-btn.active-mobile  { background:#1FD1BD; color:#000; }
+.pick-hint { font-family:'Outfit',sans-serif; font-size:11px; color:#333; text-align:center; margin-top:-4px; }
 
-/* ── TOPBAR ─────────────────────────────────── */
+/* ── APP SHELL ──────────────────────────── */
+#appShell { display:none; flex-direction:column; height:100vh; }
+
+/* ── TOPBAR ─────────────────────────────── */
 .topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 18px;
-  height: 56px;
-  background: #1a1a2e;
-  flex-shrink: 0;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 18px; height:56px; background:#1a1a2e; flex-shrink:0;
 }
+.topbar-left  { display:flex; align-items:center; gap:10px; }
+.topbar-right { display:flex; align-items:center; gap:20px; }
+.hub-name { font-family:'Outfit',sans-serif; font-size:18px; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:#fff; }
+.hub-sub  { font-family:'Outfit',sans-serif; font-size:10px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#7B8CDE; margin-top:2px; }
 
-.topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.shift-toggle, .mode-toggle { display:flex; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:4px; overflow:hidden; }
+.shift-btn, .mode-btn {
+  background:none; border:none; color:rgba(255,255,255,0.4);
+  font-family:'Outfit',sans-serif; font-size:13px; font-weight:700;
+  letter-spacing:0.2px; text-transform:uppercase; padding:5px 14px;
+  cursor:pointer; transition:all 0.15s; white-space:nowrap;
 }
+.shift-btn.active { background:#4700A3; color:#fff; }
+.mode-btn.active  { background:#006644; color:#fff; }
 
-.hub-block {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+.topbar-btn {
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15);
+  color:rgba(255,255,255,0.55); font-family:'Outfit',sans-serif; font-size:11px;
+  font-weight:700; letter-spacing:0.2px; text-transform:uppercase;
+  padding:5px 12px; border-radius:4px; cursor:pointer; transition:all 0.15s; white-space:nowrap;
 }
+.topbar-btn:hover { background:rgba(255,255,255,0.13); color:#fff; }
+.topbar-btn.active { background:#1FD1BD; color:#000; border-color:#1FD1BD; }
 
-.hub-name {
-  font-family: 'Outfit', sans-serif;
-  font-size: 22px;
-  font-weight: 900;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-  color: #fff;
-  line-height: 1;
-}
-
-.hub-sub {
-  font-family: 'Outfit', sans-serif;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: #7B8CDE;
-  margin-top: 2px;
-}
-
-.topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.shift-toggle {
-  display: flex;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.shift-btn {
-  background: none;
-  border: none;
-  color: rgba(255,255,255,0.4);
-  font-family: 'Outfit', sans-serif;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  padding: 5px 14px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.shift-btn.active { background: #4700A3; color: #fff; }
-
-.mode-toggle {
-  display: flex;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.mode-btn {
-  background: none;
-  border: none;
-  color: rgba(255,255,255,0.4);
-  font-family: 'Outfit', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  text-transform: uppercase;
-  padding: 5px 10px;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-.mode-btn.active { background: #006644; color: #fff; }
-
-.countdown-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.countdown-label {
-  font-family: 'Outfit', sans-serif;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.35);
-}
-
-.countdown-val {
-  font-family: 'Outfit', sans-serif;
-  font-size: 26px;
-  font-weight: 900;
-  letter-spacing: 0;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  min-width: 68px;
-  display: inline-block;
-  text-align: right;
-}
-
-.countdown-val.ok     { color: #1FD1BD; }
-.countdown-val.soon   { color: #FFAA00; }
-.countdown-val.urgent { color: #FF3300; animation: urgentPulse 0.5s ease-in-out infinite; }
-.countdown-val.booth  { color: #C084FC; }
-.countdown-val.booth-soon   { color: #FFAA00; }
-.countdown-val.booth-urgent { color: #FF3300; animation: urgentPulse 0.5s ease-in-out infinite; }
+.countdown-wrap { display:flex; flex-direction:column; align-items:flex-end; }
+.countdown-label { font-family:'Outfit',sans-serif; font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:rgba(255,255,255,0.35); }
+.countdown-val { font-family:'Outfit',sans-serif; font-size:26px; font-weight:900; letter-spacing:0; line-height:1; font-variant-numeric:tabular-nums; min-width:68px; text-align:right; }
+.countdown-val.ok           { color:#1FD1BD; }
+.countdown-val.soon         { color:#FFAA00; }
+.countdown-val.urgent       { color:#FF3300; animation:urgentPulse 0.5s ease-in-out infinite; }
+.countdown-val.booth        { color:#C084FC; }
+.countdown-val.booth-soon   { color:#FFAA00; }
+.countdown-val.booth-urgent { color:#FF3300; animation:urgentPulse 0.5s ease-in-out infinite; }
 @keyframes urgentPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-.clock {
-  font-family: 'Outfit', sans-serif;
-  font-size: 28px;
-  font-weight: 900;
-  letter-spacing: 0;
-  color: #fff;
-  font-variant-numeric: tabular-nums;
-  min-width: 120px;
-  text-align: right;
-}
-
-.sync-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: 'Outfit', sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  color: rgba(255,255,255,0.3);
-}
-
-.topbar-reset {
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.15);
-  color: rgba(255,255,255,0.55);
-  font-family: 'Outfit', sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  text-transform: uppercase;
-  padding: 5px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-.topbar-reset:hover { background: rgba(255,255,255,0.13); color: #fff; }
-
-.sync-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: #1FD1BD; flex-shrink: 0;
-}
-.sync-dot.syncing { background: #FFAA00; animation: blink 0.6s infinite; }
-.sync-dot.error   { background: #FF3300; }
+.clock { font-family:'Outfit',sans-serif; font-size:28px; font-weight:900; color:#fff; font-variant-numeric:tabular-nums; min-width:120px; text-align:right; }
+.sync-pill { display:flex; align-items:center; gap:6px; }
+.sync-dot  { width:7px; height:7px; border-radius:50%; background:#1FD1BD; flex-shrink:0; }
+.sync-dot.syncing { background:#FFAA00; animation:blink 0.6s infinite; }
+.sync-dot.error   { background:#FF3300; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
-/* ── GRID ───────────────────────────────────── */
-.grid-wrap {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 8px;
-  gap: 4px;
-  overflow: hidden;
-}
+/* Mobile topbar overrides */
+.topbar.mobile-topbar { padding:0 10px; height:48px; }
+.topbar.mobile-topbar .hub-sub,
+.topbar.mobile-topbar .topbar-btn,
+.topbar.mobile-topbar #mobileToggleBtn,
+.topbar.mobile-topbar .clock,
+.topbar.mobile-topbar .sync-pill { display:none; }
+.topbar.mobile-topbar .hub-name { font-size:14px; letter-spacing:0.5px; }
+.topbar.mobile-topbar .mode-toggle { display:flex; }
+.topbar.mobile-topbar .countdown-val { font-size:20px; min-width:50px; }
+.topbar.mobile-topbar .countdown-label { font-size:8px; }
 
-.grid-row {
-  display: flex;
-  gap: 4px;
-  flex: 1;
-  min-height: 0;
-}
-
-/* Region label — grey box like the original */
+/* ── DESKTOP GRID ───────────────────────── */
+.grid-wrap { flex:1; display:flex; flex-direction:column; padding:8px; gap:4px; overflow:hidden; background:#f0f0f0; }
+.grid-row  { display:flex; gap:4px; flex:1; min-height:0; }
 .region-lbl {
-  width: 160px;
-  flex-shrink: 0;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #2a2a2a;
-  border-radius: 4px;
-  font-family: 'Outfit', sans-serif;
-  font-size: clamp(14px, 2.8vh, 28px);
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: #fff;
-  text-align: center;
-  padding: 0 8px;
+  width:160px; flex-shrink:0; position:relative; display:flex; align-items:center;
+  justify-content:center; background:#2a2a2a; border-radius:4px;
+  font-family:'Outfit',sans-serif; font-size:clamp(14px,2.8vh,28px); font-weight:800;
+  color:#fff; text-align:center; padding:0 8px;
 }
+.nation-badge { position:absolute; top:4px; right:5px; font-family:'Outfit',sans-serif; font-size:11px; font-weight:800; color:#ff3b30; pointer-events:none; }
 
-.nation-badge {
-  position: absolute;
-  top: 4px;
-  right: 5px;
-  font-family: 'Outfit', sans-serif;
-  font-size: 11px;
-  font-weight: 800;
-  color: #ff3b30;
-  line-height: 1;
-  pointer-events: none;
-}
-
-/* ── BULLETIN CELL ──────────────────────────── */
+/* ── CELLS ──────────────────────────────── */
 .cell {
-  flex: 1;
-  border-radius: 4px;
-  cursor: pointer;
-  user-select: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  transition: filter 0.1s, transform 0.08s;
-  position: relative;
-  overflow: hidden;
-  min-width: 0;
+  flex:1; border-radius:4px; cursor:pointer; user-select:none;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  transition:filter 0.1s, transform 0.08s; position:relative; overflow:hidden; min-width:0;
 }
+.cell:hover  { filter:brightness(1.2); transform:scale(1.02); }
+.cell:active { transform:scale(0.97); }
+.cell.pending    { background:var(--pending); }
+.cell.ready      { background:var(--ready); }
+.cell.redispatch { background:var(--redispatch); }
+.cell.dispatched { background:var(--dispatched); }
+.cell.breaking   { background:var(--breaking); animation:breakingPulse 1.2s ease-in-out infinite; }
+@keyframes breakingPulse { 0%,100%{filter:brightness(1)} 50%{filter:brightness(1.45)} }
+.cell-time   { font-family:'Outfit',sans-serif; font-size:clamp(18px,3.8vh,42px); font-weight:800; color:rgba(255,255,255,0.95); line-height:1; }
+.cell-status { font-family:'Outfit',sans-serif; font-size:clamp(11px,1.8vh,20px); font-weight:600; text-transform:uppercase; color:rgba(255,255,255,0.6); margin-top:4px; }
+.cell.breaking .cell-time, .cell.breaking .cell-status { color:rgba(0,0,0,0.75); }
 
-.cell:hover  { filter: brightness(1.2); transform: scale(1.02); }
-.cell:active { transform: scale(0.97); }
+.prev-stripe { position:absolute; left:0; top:0; bottom:0; width:7px; border-radius:4px 0 0 4px; opacity:0; }
+.cell.dispatched .prev-stripe { opacity:1; }
+.prev-stripe.pending    { background:var(--pending); }
+.prev-stripe.ready      { background:var(--ready); }
+.prev-stripe.redispatch { background:var(--redispatch); }
+.prev-stripe.breaking   { background:var(--breaking); }
+.prev-stripe.none       { opacity:0 !important; }
 
-.cell.pending    { background: var(--pending); }
-.cell.ready      { background: var(--ready); }
-.cell.redispatch { background: var(--redispatch); }
-.cell.dispatched { background: var(--dispatched); }
-.cell.breaking   { background: var(--breaking); }
+.note-curl { position:absolute; top:0; right:0; width:0; height:0; border-style:solid; border-width:0 20px 20px 0; border-color:transparent #2a2a2a transparent transparent; cursor:pointer; z-index:2; display:none; }
 
-.cell.breaking {
-  animation: breakingPulse 1.2s ease-in-out infinite;
-}
-@keyframes breakingPulse {
-  0%,100% { filter: brightness(1); }
-  50%      { filter: brightness(1.45); }
-}
+/* ── MOBILE VIEW ────────────────────────── */
+.mobile-wrap { flex:1; display:none; flex-direction:column; overflow:hidden; background:#f0f0f0; }
+.mobile-wrap.show { display:flex; }
+.mobile-hour-bar { display:flex; background:#1a1a2e; border-bottom:1px solid #2a2a2a; padding:0 8px; flex-shrink:0; overflow-x:auto; scrollbar-width:none; }
+.mobile-hour-bar::-webkit-scrollbar { display:none; }
+.mobile-hour-btn { background:none; border:none; color:rgba(255,255,255,0.35); font-family:'Outfit',sans-serif; font-size:14px; font-weight:800; padding:10px 14px; cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap; transition:all 0.15s; flex-shrink:0; }
+.mobile-hour-btn.active { color:#fff; border-bottom-color:#1FD1BD; }
+.mobile-list { flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:6px; }
+.mobile-row  { display:flex; gap:6px; align-items:stretch; min-height:64px; }
+.mobile-lbl  { width:72px; flex-shrink:0; background:#2a2a2a; border-radius:6px; display:flex; align-items:center; justify-content:center; font-family:'Outfit',sans-serif; font-size:15px; font-weight:800; color:#fff; text-align:center; position:relative; }
+.mobile-cell { flex:1; border-radius:6px; cursor:pointer; user-select:none; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; overflow:hidden; transition:filter 0.1s; }
+.mobile-cell:active { filter:brightness(1.2); }
+.mobile-cell.pending    { background:var(--pending); }
+.mobile-cell.ready      { background:var(--ready); }
+.mobile-cell.redispatch { background:var(--redispatch); }
+.mobile-cell.dispatched { background:var(--dispatched); }
+.mobile-cell.breaking   { background:var(--breaking); animation:breakingPulse 1.2s ease-in-out infinite; }
+.mobile-status { font-family:'Outfit',sans-serif; font-size:18px; font-weight:800; color:rgba(255,255,255,0.95); }
+.mobile-sub    { font-family:'Outfit',sans-serif; font-size:11px; font-weight:600; text-transform:uppercase; color:rgba(255,255,255,0.5); margin-top:3px; }
+.mobile-cell.breaking .mobile-status, .mobile-cell.breaking .mobile-sub { color:rgba(0,0,0,0.75); }
+.mobile-cell .prev-stripe { position:absolute; left:0; top:0; bottom:0; width:6px; border-radius:6px 0 0 6px; opacity:0; }
+.mobile-cell.dispatched .prev-stripe { opacity:1; }
+.mobile-cell .note-curl { position:absolute; top:0; right:0; width:0; height:0; border-style:solid; border-width:0 18px 18px 0; border-color:transparent #2a2a2a transparent transparent; z-index:2; display:none; }
 
-.cell.saving::before {
-  content:''; position:absolute; inset:0;
-  background: rgba(255,255,255,0.1);
-  animation: savePulse 0.4s ease-in-out infinite;
-}
-@keyframes savePulse { 0%,100%{opacity:0} 50%{opacity:1} }
-
-/* Note curl indicator */
-.note-curl {
-  position: absolute;
-  top: 0; right: 0;
-  width: 0; height: 0;
-  border-style: solid;
-  border-width: 0 20px 20px 0;
-  border-color: transparent #2a2a2a transparent transparent;
-  cursor: pointer;
-  transition: border-width 0.15s;
-  z-index: 2;
-}
-.note-curl:hover { border-width: 0 26px 26px 0; }
-
-/* Note modal overlay */
-.note-modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 1000;
-  display: none;
-  align-items: center;
-  justify-content: center;
-}
-.note-modal-overlay.show { display: flex; }
-
-.note-modal {
-  background: #1e1e1e;
-  border: 1px solid #333;
-  border-radius: 8px;
-  box-shadow: 0 16px 60px rgba(0,0,0,0.7);
-  padding: 20px;
-  width: 360px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.note-modal-title {
-  font-family: 'Outfit', sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-  color: #888;
-}
-
-.note-modal-region {
-  font-family: 'Outfit', sans-serif;
-  font-size: 18px;
-  font-weight: 800;
-  color: #fff;
-  margin-top: -4px;
-}
-
-.note-modal textarea {
-  background: #111;
-  border: 1px solid #333;
-  border-radius: 5px;
-  color: #fff;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  padding: 10px 12px;
-  resize: vertical;
-  min-height: 90px;
-  outline: none;
-}
-.note-modal textarea:focus { border-color: #555; }
-
-.note-modal-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-.note-btn {
-  font-family: 'Outfit', sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  padding: 7px 18px;
-  border-radius: 4px;
-  cursor: pointer;
-  border: none;
-}
-.note-btn.save   { background: #4700A3; color: #fff; }
-.note-btn.clear  { background: #2a2a2a; color: #aaa; }
-.note-btn.cancel { background: transparent; color: #666; border: 1px solid #333; }
-
-.cell-time {
-  font-family: 'Outfit', sans-serif;
-  font-size: clamp(18px, 3.8vh, 42px);
-  font-weight: 800;
-  letter-spacing: 0.2px;
-  color: rgba(255,255,255,0.95);
-  line-height: 1;
-}
-
-.cell-status {
-  font-family: 'Outfit', sans-serif;
-  font-size: clamp(11px, 1.8vh, 20px);
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.6);
-  margin-top: 4px;
-  line-height: 1;
-}
-
-.cell.breaking .cell-time,
-.cell.breaking .cell-status { color: rgba(0,0,0,0.75); }
-
-/* Previous-state stripe on dispatched cells */
-.cell .prev-stripe {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 7px;
-  border-radius: 4px 0 0 4px;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.cell.dispatched .prev-stripe { opacity: 1; }
-.prev-stripe.pending    { background: var(--pending); }
-.prev-stripe.ready      { background: var(--ready); }
-.prev-stripe.redispatch { background: var(--redispatch); }
-.prev-stripe.breaking   { background: var(--breaking); }
-.prev-stripe.none       { opacity: 0 !important; }
-
-.help-section {
-  border-top: 1px solid #2a2a2a;
-  padding-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.help-heading {
-  font-family: 'Outfit', sans-serif;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: #666;
-}
-
-.help-row {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  color: #bbb;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  line-height: 1.5;
-}
-
-.help-swatch {
-  width: 14px;
-  height: 14px;
-  border-radius: 2px;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.help-badge {
-  font-family: 'Outfit', sans-serif;
-  font-size: 10px;
-  font-weight: 700;
-  color: #fff;
-  padding: 2px 7px;
-  border-radius: 3px;
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-
-.hub-pick-btn {
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  border-radius: 6px;
-  color: #ccc;
-  font-family: 'Outfit', sans-serif;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  padding: 16px 24px;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.15s;
-  width: 100%;
-}
-.hub-pick-btn:hover {
-  background: #4700A3;
-  border-color: #4700A3;
-  color: #fff;
-  transform: translateX(4px);
-}
-
-/* ── MOBILE TOPBAR ──────────────────────────── */
-@media (max-width: 768px) {
-  .topbar { padding: 0 10px; height: 48px; }
-  .hub-sub { display: none; }
-  .hub-name { font-size: 13px; }
-}
-
-.topbar.mobile-topbar {
-  padding: 0 10px;
-  height: 48px;
-}
-.topbar.mobile-topbar .hub-sub { display: none; }
-.topbar.mobile-topbar .hub-name { font-size: 14px; letter-spacing: 0.5px; }
-.topbar.mobile-topbar .topbar-reset { display: none; }
-.topbar.mobile-topbar #mobileToggleBtn { display: none; }
-.topbar.mobile-topbar .mode-toggle { display: flex; }
-.topbar.mobile-topbar .topbar-right { gap: 10px; }
-.topbar.mobile-topbar .clock { display: none; }
-.topbar.mobile-topbar .sync-pill { display: none; }
-.topbar.mobile-topbar .countdown-label { font-size: 8px; }
-.topbar.mobile-topbar .countdown-val { font-size: 20px; min-width: 50px; }
-
-/* ── MOBILE VIEW ────────────────────────────── */
-.mobile-btn {
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.15);
-  color: rgba(255,255,255,0.55);
-  font-family: 'Outfit', sans-serif;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-.mobile-btn:hover { background: rgba(255,255,255,0.13); color: #fff; }
-.mobile-btn.active { background: #1FD1BD; color: #000; border-color: #1FD1BD; }
-
-/* Mobile grid */
-.mobile-wrap {
-  flex: 1;
-  display: none;
-  flex-direction: column;
-  overflow: hidden;
-  background: #f0f0f0;
-}
-
-.mobile-wrap.show { display: flex; }
-
-.mobile-hour-bar {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  background: #1a1a2e;
-  border-bottom: 1px solid #2a2a2a;
-  padding: 0 8px;
-  flex-shrink: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.mobile-hour-bar::-webkit-scrollbar { display: none; }
-
-.mobile-hour-btn {
-  background: none;
-  border: none;
-  color: rgba(255,255,255,0.35);
-  font-family: 'Outfit', sans-serif;
-  font-size: 14px;
-  font-weight: 800;
-  padding: 10px 14px;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  white-space: nowrap;
-  transition: all 0.15s;
-  flex-shrink: 0;
-}
-.mobile-hour-btn:hover { color: rgba(255,255,255,0.7); }
-.mobile-hour-btn.active { color: #fff; border-bottom-color: #1FD1BD; }
-
-.mobile-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.mobile-row {
-  display: flex;
-  gap: 6px;
-  align-items: stretch;
-  min-height: 64px;
-}
-
-.mobile-lbl {
-  width: 72px;
-  flex-shrink: 0;
-  background: #2a2a2a;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Outfit', sans-serif;
-  font-size: 15px;
-  font-weight: 800;
-  color: #fff;
-  text-align: center;
-  position: relative;
-}
-
-.mobile-cell {
-  flex: 1;
-  border-radius: 6px;
-  cursor: pointer;
-  user-select: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  transition: filter 0.1s;
-}
-.mobile-cell:active { filter: brightness(1.2); }
-
-.mobile-cell.pending    { background: var(--pending); }
-.mobile-cell.ready      { background: var(--ready); }
-.mobile-cell.redispatch { background: var(--redispatch); }
-.mobile-cell.dispatched { background: var(--dispatched); }
-.mobile-cell.breaking   { background: var(--breaking); animation: breakingPulse 1.2s ease-in-out infinite; }
-
-.mobile-status {
-  font-family: 'Outfit', sans-serif;
-  font-size: 18px;
-  font-weight: 800;
-  color: rgba(255,255,255,0.95);
-  line-height: 1;
-}
-.mobile-sub {
-  font-family: 'Outfit', sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.5);
-  margin-top: 3px;
-}
-.mobile-cell.breaking .mobile-status,
-.mobile-cell.breaking .mobile-sub { color: rgba(0,0,0,0.75); }
-
-/* Prev stripe on mobile */
-.mobile-cell .prev-stripe {
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 6px;
-  border-radius: 6px 0 0 6px;
-  opacity: 0;
-}
-.mobile-cell.dispatched .prev-stripe { opacity: 1; }
-
-/* Note curl on mobile */
-.mobile-cell .note-curl {
-  position: absolute;
-  top: 0; right: 0;
-  width: 0; height: 0;
-  border-style: solid;
-  border-width: 0 18px 18px 0;
-  border-color: transparent #2a2a2a transparent transparent;
-  z-index: 2;
-}
-
-/* ── LOADING OVERLAY ────────────────────────── */
-.data-loading-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(10,10,10,0.85);
-  z-index: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(4px);
-  transition: opacity 0.4s;
-}
-.data-loading-overlay.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.data-loading-box {
-  background: #1a1a2e;
-  border: 1px solid #2a2a3e;
-  border-radius: 10px;
-  padding: 32px 40px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  max-width: 340px;
-}
-
-.data-loading-spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid #2a2a3e;
-  border-top-color: #1FD1BD;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.data-loading-title {
-  font-family: 'Outfit', sans-serif;
-  font-size: 16px;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: 0.3px;
-}
-
-.data-loading-sub {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  color: #555;
-  line-height: 1.5;
-}
-
-.data-loading-refresh {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
-  color: #333;
-  line-height: 1.5;
-  transition: color 0.3s;
-}
-.data-loading-refresh.show { color: #666; }
-
-/* ── CONTEXT MENU ───────────────────────────── */
-.ctx {
-  position: fixed;
-  background: #1A1A1A;
-  border: 1px solid #333;
-  border-radius: 6px;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
-  z-index: 999;
-  min-width: 190px;
-  display: none;
-  overflow: hidden;
-}
-.ctx.show { display: block; }
-
-.ctx-title {
-  font-family: 'Outfit', sans-serif;
-  font-size: 11px; font-weight: 700;
-  letter-spacing: 0.5px; text-transform: uppercase;
-  color: #555;
-  padding: 10px 14px 7px;
-  border-bottom: 1px solid #262626;
-}
-
-.ctx-opt {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 14px; cursor: pointer;
-  font-family: 'Outfit', sans-serif;
-  font-size: 15px; font-weight: 700;
-  letter-spacing: 0.2px; text-transform: uppercase;
-  transition: background 0.1s;
-}
-.ctx-opt:hover { background: #252525; }
+/* ── CONTEXT MENU ───────────────────────── */
+.ctx { position:fixed; background:#1A1A1A; border:1px solid #333; border-radius:6px; box-shadow:0 8px 40px rgba(0,0,0,0.7); z-index:999; min-width:190px; display:none; overflow:hidden; }
+.ctx.show { display:block; }
+.ctx-title { font-family:'Outfit',sans-serif; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#555; padding:10px 14px 7px; border-bottom:1px solid #262626; }
+.ctx-opt { display:flex; align-items:center; gap:10px; padding:9px 14px; cursor:pointer; font-family:'Outfit',sans-serif; font-size:15px; font-weight:700; letter-spacing:1px; text-transform:uppercase; transition:background 0.1s; }
+.ctx-opt:hover { background:#252525; }
+.ctx-sep { border-top:1px solid #262626; margin:4px 0; }
 .ctx-sw { width:12px; height:12px; border-radius:2px; flex-shrink:0; }
+.ctx-opt.pending    { color:#FF6B50; } .ctx-opt.pending    .ctx-sw { background:var(--pending); }
+.ctx-opt.ready      { color:#4ADE80; } .ctx-opt.ready      .ctx-sw { background:var(--ready); }
+.ctx-opt.redispatch { color:#60A5FA; } .ctx-opt.redispatch .ctx-sw { background:var(--redispatch); }
+.ctx-opt.dispatched { color:#888;    } .ctx-opt.dispatched .ctx-sw { background:#444; border:1px solid #555; }
+.ctx-opt.breaking   { color:#FFD700; } .ctx-opt.breaking   .ctx-sw { background:var(--breaking); }
+.ctx-opt.note-opt   { color:#ccc;    } .ctx-opt.note-opt   .ctx-sw { background:#444; border:1px solid #666; }
 
-.ctx-opt.pending    { color: #FF6B50; } .ctx-opt.pending    .ctx-sw { background: var(--pending); }
-.ctx-opt.ready      { color: #4ADE80; } .ctx-opt.ready      .ctx-sw { background: var(--ready); }
-.ctx-opt.redispatch { color: #60A5FA; } .ctx-opt.redispatch .ctx-sw { background: var(--redispatch); }
-.ctx-opt.dispatched { color: #888;    } .ctx-opt.dispatched .ctx-sw { background: #444; border:1px solid #555; }
-.ctx-opt.breaking   { color: #FFD700; } .ctx-opt.breaking   .ctx-sw { background: var(--breaking); }
+/* ── NOTE MODAL ─────────────────────────── */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; display:none; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal-box { background:#1e1e1e; border:1px solid #333; border-radius:8px; box-shadow:0 16px 60px rgba(0,0,0,0.7); padding:20px; width:360px; display:flex; flex-direction:column; gap:12px; }
+.modal-title  { font-family:'Outfit',sans-serif; font-size:13px; font-weight:700; text-transform:uppercase; color:#888; }
+.modal-region { font-family:'Outfit',sans-serif; font-size:18px; font-weight:800; color:#fff; }
+.modal-box textarea { background:#111; border:1px solid #333; border-radius:5px; color:#fff; font-family:'DM Sans',sans-serif; font-size:14px; padding:10px 12px; resize:vertical; min-height:90px; outline:none; }
+.modal-box textarea:focus { border-color:#555; }
+.modal-actions { display:flex; gap:8px; justify-content:flex-end; }
+.modal-btn { font-family:'Outfit',sans-serif; font-size:13px; font-weight:700; padding:7px 18px; border-radius:4px; cursor:pointer; border:none; }
+.modal-btn.save   { background:#4700A3; color:#fff; }
+.modal-btn.clear  { background:#2a2a2a; color:#aaa; }
+.modal-btn.cancel { background:transparent; color:#666; border:1px solid #333; }
+
+/* ── HELP MODAL ─────────────────────────── */
+.help-section { border-top:1px solid #2a2a2a; padding-top:12px; display:flex; flex-direction:column; gap:7px; }
+.help-heading { font-family:'Outfit',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; color:#666; }
+.help-row { font-family:'DM Sans',sans-serif; font-size:13px; color:#bbb; display:flex; align-items:flex-start; gap:10px; line-height:1.5; }
+.help-swatch { width:14px; height:14px; border-radius:2px; flex-shrink:0; margin-top:2px; }
+.help-badge  { font-family:'Outfit',sans-serif; font-size:10px; font-weight:700; color:#fff; padding:2px 7px; border-radius:3px; flex-shrink:0; margin-top:1px; }
+
+/* ── LOADING OVERLAY ────────────────────── */
+.loading-overlay { position:fixed; inset:0; background:rgba(10,10,10,0.85); z-index:800; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); transition:opacity 0.4s; }
+.loading-overlay.hidden { opacity:0; pointer-events:none; }
+.loading-box { background:#1a1a2e; border:1px solid #2a2a3e; border-radius:10px; padding:32px 40px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:16px; max-width:340px; }
+.loading-spinner { width:36px; height:36px; border:3px solid #2a2a3e; border-top-color:#1FD1BD; border-radius:50%; animation:spin 0.8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.loading-title { font-family:'Outfit',sans-serif; font-size:16px; font-weight:700; color:#fff; }
+.loading-sub   { font-family:'DM Sans',sans-serif; font-size:13px; color:#555; line-height:1.5; }
+.loading-retry { font-family:'DM Sans',sans-serif; font-size:12px; color:#333; line-height:1.5; transition:color 0.3s; }
+.loading-retry.show { color:#666; }
 </style>
 </head>
 <body>
 
-<!-- Hub Picker -->
-<div id="hubPicker" style="
-  position:fixed;inset:0;background:#0a0a0a;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  gap:32px;z-index:500;
-">
-  <div style="text-align:center;">
-    <div style="font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#555;margin-bottom:8px;">Bauer Media Audio</div>
-    <div style="font-family:'Outfit',sans-serif;font-size:36px;font-weight:900;letter-spacing:1px;color:#fff;">Bulletin Tracker</div>
-    <div style="font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;color:#444;margin-top:6px;letter-spacing:1px;">Select your hub to continue</div>
+<!-- HUB PICKER -->
+<div id="hubPicker">
+  <div style="text-align:center">
+    <div class="pick-title-sub">Bauer Media Audio</div>
+    <div class="pick-title">Bulletin Tracker</div>
+    <div class="pick-subtitle">Select your hub to continue</div>
   </div>
-  <div style="display:flex;flex-direction:column;gap:12px;width:320px;">
+  <div class="pick-buttons">
     <button onclick="setHub('sw')" class="hub-pick-btn">South &amp; West Hub</button>
     <button onclick="setHub('se')" class="hub-pick-btn">South &amp; East Hub</button>
     <button onclick="setHub('nm')" class="hub-pick-btn">North &amp; Midlands Hub</button>
-
-    <!-- View toggle -->
-    <div style="display:flex;gap:0;background:#111;border:1px solid #2a2a2a;border-radius:6px;overflow:hidden;margin-top:8px;">
-      <button id="pickDesktop" onclick="pickView('desktop')" style="flex:1;background:#4700A3;border:none;color:#fff;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;padding:10px;cursor:pointer;transition:all 0.15s;">&#128444; Desktop</button>
-      <button id="pickMobile"  onclick="pickView('mobile')"  style="flex:1;background:none;border:none;color:rgba(255,255,255,0.4);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;padding:10px;cursor:pointer;transition:all 0.15s;">&#9741; Mobile</button>
+    <div class="pick-view-toggle">
+      <button id="pickDesktop" class="pick-view-btn active-desktop" onclick="pickView('desktop')">&#128444; Desktop</button>
+      <button id="pickMobile"  class="pick-view-btn"               onclick="pickView('mobile')">&#9741; Mobile</button>
     </div>
-    <div style="font-family:'Outfit',sans-serif;font-size:11px;color:#333;text-align:center;margin-top:-6px;">Select view, then choose your hub above</div>
+    <div class="pick-hint">Choose view, then select your hub above</div>
   </div>
 </div>
 
-<!-- App shell (hidden until hub selected) -->
+<!-- APP SHELL -->
 <div id="appShell" style="display:none;flex-direction:column;height:100vh;">
-<div class="topbar">
-  <div class="topbar-left">
-    <div class="hub-block">
-      <div class="hub-name" id="hubName">South &amp; West Hub</div>
-      <div class="hub-sub">Bulletin Tracker</div>
-    </div>
-    <div class="shift-toggle">
-      <button class="shift-btn active" id="shiftBtn" onclick="cycleShift()">PM</button>
-    </div>
-    <div class="mode-toggle">
-      <button class="mode-btn active" id="btnCreation" onclick="setMode('creation')">CRE</button>
-      <button class="mode-btn" id="btnDelivery" onclick="setMode('delivery')">DEL</button>
-    </div>
-    <button class="topbar-reset" onclick="confirmReset()">&#8635; Reset</button>
-    <button class="topbar-reset" onclick="openHelp()" style="letter-spacing:0.2px;">? Help</button>
-    <button class="mobile-btn" id="mobileToggleBtn" onclick="toggleMobileView()">&#9741; Mobile</button>
-  </div>
-  <div class="topbar-right">
-    <div class="countdown-wrap">
-      <div class="countdown-label" id="countdownLabel">Next :50 in</div>
-      <div class="countdown-val ok" id="countdown">0:00</div>
-    </div>
-    <div class="clock" id="clock">00:00</div>
-    <div class="sync-pill">
-      <div class="sync-dot" id="syncDot" title="Connecting"></div>
-    </div>
-  </div>
-</div>
 
-<div class="grid-wrap" id="gridWrap"></div>
+  <!-- TOPBAR -->
+  <div class="topbar" id="mainTopbar">
+    <div class="topbar-left">
+      <div>
+        <div class="hub-name" id="hubName">Hub</div>
+        <div class="hub-sub">Bulletin Tracker</div>
+      </div>
+      <div class="shift-toggle">
+        <button class="shift-btn active" id="shiftBtn" onclick="cycleShift()">PM</button>
+      </div>
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="btnCreation" onclick="setMode('creation')">CRE</button>
+        <button class="mode-btn"        id="btnDelivery" onclick="setMode('delivery')">DEL</button>
+      </div>
+      <button class="topbar-btn" onclick="confirmReset()">&#8635; Reset</button>
+      <button class="topbar-btn" onclick="openHelp()">? Help</button>
+      <button class="topbar-btn" id="mobileToggleBtn" onclick="toggleMobileView()">&#9741; Mobile</button>
+    </div>
+    <div class="topbar-right">
+      <div class="countdown-wrap">
+        <div class="countdown-label" id="countdownLabel">Next :50 in</div>
+        <div class="countdown-val ok" id="countdown">0:00</div>
+      </div>
+      <div class="clock" id="clock">00:00:00</div>
+      <div class="sync-pill">
+        <div class="sync-dot" id="syncDot"></div>
+      </div>
+    </div>
+  </div>
 
+  <!-- DESKTOP GRID -->
+  <div class="grid-wrap" id="gridWrap"></div>
+
+  <!-- MOBILE VIEW -->
+  <div class="mobile-wrap" id="mobileWrap">
+    <div class="mobile-hour-bar" id="mobileHourBar"></div>
+    <div class="mobile-list"     id="mobileList"></div>
+  </div>
+
+  <!-- LOADING OVERLAY -->
+  <div class="loading-overlay" id="loadingOverlay" style="display:none;">
+    <div class="loading-box">
+      <div class="loading-spinner"></div>
+      <div class="loading-title">Loading bulletin data&hellip;</div>
+      <div class="loading-sub">Fetching the latest states from the sheet.<br>This usually takes a few seconds.</div>
+      <div class="loading-retry" id="loadingRetry">Taking too long? <a href="javascript:location.reload()" style="color:#1FD1BD;text-decoration:none;">Refresh the page</a></div>
+    </div>
+  </div>
+
+</div><!-- /appShell -->
+
+<!-- CONTEXT MENU -->
 <div class="ctx" id="ctx">
   <div class="ctx-title" id="ctxTitle">Set status</div>
   <div class="ctx-opt pending"    onclick="setStatus('PENDING')">   <div class="ctx-sw"></div>Pending</div>
@@ -838,802 +303,499 @@ body {
   <div class="ctx-opt redispatch" onclick="setStatus('REDISPATCH')"><div class="ctx-sw"></div>Redispatch</div>
   <div class="ctx-opt dispatched" onclick="setStatus('DISPATCHED')"><div class="ctx-sw"></div>Dispatched</div>
   <div class="ctx-opt breaking"   onclick="setStatus('BREAKING')">  <div class="ctx-sw"></div>Breaking</div>
-  <div style="border-top:1px solid #262626; margin: 4px 0;"></div>
-  <div class="ctx-opt" style="color:#ccc;" onclick="openNoteFromCtx()"><div class="ctx-sw" style="background:#444;border:1px solid #666;"></div>Add / Edit Note</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-opt note-opt"   onclick="openNoteFromCtx()">      <div class="ctx-sw"></div>Add / Edit Note</div>
 </div>
 
-<!-- Help modal -->
-<div class="note-modal-overlay" id="helpOverlay" onclick="if(event.target===this)closeHelp()">
-  <div class="note-modal" style="width:480px;max-height:80vh;overflow-y:auto;">
+<!-- NOTE MODAL -->
+<div class="modal-overlay" id="noteOverlay">
+  <div class="modal-box">
+    <div class="modal-title">Note</div>
+    <div class="modal-region" id="noteRegion"></div>
+    <textarea id="noteText" placeholder="Type a note&hellip;"></textarea>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeNote()">Cancel</button>
+      <button class="modal-btn clear"  onclick="clearNote()">Clear</button>
+      <button class="modal-btn save"   onclick="saveNote()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- HELP MODAL -->
+<div class="modal-overlay" id="helpOverlay" onclick="if(event.target===this)closeHelp()">
+  <div class="modal-box" style="width:480px;max-height:80vh;overflow-y:auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;">
-      <div class="note-modal-title" style="font-size:15px;color:#fff;">How to use the Bulletin Tracker</div>
-      <button onclick="closeHelp()" style="background:none;border:none;color:#666;font-size:20px;cursor:pointer;line-height:1;">&times;</button>
+      <div class="modal-title" style="font-size:15px;color:#fff;">How to use the Bulletin Tracker</div>
+      <button onclick="closeHelp()" style="background:none;border:none;color:#666;font-size:20px;cursor:pointer;">&times;</button>
     </div>
-
     <div class="help-section">
-      <div class="help-heading">Bulletin statuses</div>
-      <div class="help-row"><span class="help-swatch" style="background:#CC1100;"></span><span><strong>Pending</strong> — Bulletin not yet started</span></div>
-      <div class="help-row"><span class="help-swatch" style="background:#1A6B28;"></span><span><strong>Ready</strong> — Written and ready to go</span></div>
-      <div class="help-row"><span class="help-swatch" style="background:#0A3580;"></span><span><strong>Redispatch</strong> — Being sent again with updates</span></div>
-      <div class="help-row"><span class="help-swatch" style="background:#1A1A1A;border:1px solid #444;"></span><span><strong>Dispatched</strong> — Sent. A coloured stripe on the left shows the previous state</span></div>
-      <div class="help-row"><span class="help-swatch" style="background:#A07800;"></span><span><strong>Breaking</strong> — Breaking news bulletin, pulses to draw attention</span></div>
+      <div class="help-heading">Statuses</div>
+      <div class="help-row"><span class="help-swatch" style="background:#CC1100"></span><span><strong>Pending</strong> — Not yet started</span></div>
+      <div class="help-row"><span class="help-swatch" style="background:#1A6B28"></span><span><strong>Ready</strong> — Written and ready</span></div>
+      <div class="help-row"><span class="help-swatch" style="background:#1A6EB5"></span><span><strong>Redispatch</strong> — Being sent again with updates</span></div>
+      <div class="help-row"><span class="help-swatch" style="background:#1A1A1A;border:1px solid #444"></span><span><strong>Dispatched</strong> — Sent. Coloured stripe shows previous state</span></div>
+      <div class="help-row"><span class="help-swatch" style="background:#A07800"></span><span><strong>Breaking</strong> — Breaking news, pulses to draw attention</span></div>
     </div>
-
     <div class="help-section">
       <div class="help-heading">Clicking</div>
-      <div class="help-row">&#x1F5B1; <span><strong>Left click</strong> — Cycles through statuses (in Creation mode), or instantly Dispatches (in Delivery mode)</span></div>
-      <div class="help-row">&#x1F5B1; <span><strong>Right click</strong> — Opens a menu to jump to any status directly, or add/edit a note</span></div>
+      <div class="help-row">&#x1F5B1; <span><strong>Left click (CRE mode)</strong> — Cycles through statuses</span></div>
+      <div class="help-row">&#x1F5B1; <span><strong>Left click (DEL mode)</strong> — Instantly dispatches</span></div>
+      <div class="help-row">&#x1F5B1; <span><strong>Right click</strong> — Jump to any status, or add a note</span></div>
     </div>
-
     <div class="help-section">
-      <div class="help-heading">Modes (CRE / DEL)</div>
-      <div class="help-row"><span class="help-badge" style="background:#006644;">CRE</span><span><strong>Creation</strong> — Left click cycles all statuses. For journalists building bulletins</span></div>
-      <div class="help-row"><span class="help-badge" style="background:#4700A3;">DEL</span><span><strong>Delivery</strong> — Left click goes straight to Dispatched. For presenters sending bulletins</span></div>
+      <div class="help-heading">Modes</div>
+      <div class="help-row"><span class="help-badge" style="background:#006644">CRE</span><span><strong>Creation</strong> — For journalists building bulletins</span></div>
+      <div class="help-row"><span class="help-badge" style="background:#4700A3">DEL</span><span><strong>Delivery</strong> — For presenters; click dispatches immediately</span></div>
     </div>
-
-    <div class="help-section">
-      <div class="help-heading">AM / PM</div>
-      <div class="help-row">Switches between the morning shift (0600–1300) and afternoon shift (1400–1900)</div>
-    </div>
-
-    <div class="help-section">
-      <div class="help-heading">Notes</div>
-      <div class="help-row">Right-click any bulletin and choose <em>Add / Edit Note</em>. A dark triangle in the top-right corner of a bulletin means a note is attached — click it to read or edit the note</div>
-    </div>
-
-    <div class="help-section">
-      <div class="help-heading">Nation shared stations</div>
-      <div class="help-row">A small red <strong style="color:#ff3b30;">N</strong> in the corner of a station label means that bulletin is also shared with Nation</div>
-    </div>
-
     <div class="help-section">
       <div class="help-heading">Countdown</div>
-      <div class="help-row">The timer top-right counts down to <strong>:50 past the hour</strong> — when bulletins should be dispatched. It turns amber under 5 minutes and flashes red under 2 minutes</div>
+      <div class="help-row">Counts down to your booth entry time (purple), then to the :50 deadline (teal). Based on bulletins for the upcoming hour — 2 mins each for Pending/Ready/Breaking, 10 secs for Redispatch.</div>
     </div>
-
     <div class="help-section">
-      <div class="help-heading">Reset</div>
-      <div class="help-row">Resets all bulletins in the current shift to Pending and clears all notes</div>
+      <div class="help-heading">Nation stations</div>
+      <div class="help-row">A red <strong style="color:#ff3b30">N</strong> on a station label means that bulletin is shared with Nation.</div>
+    </div>
+    <div class="help-section">
+      <div class="help-heading">Notes</div>
+      <div class="help-row">Right-click any bulletin and choose Add/Edit Note. A dark triangle in the top-right corner means a note exists — click it to read or edit.</div>
     </div>
   </div>
 </div>
-
-<!-- Note modal -->
-<div class="note-modal-overlay" id="noteOverlay">
-  <div class="note-modal">
-    <div class="note-modal-title">Note</div>
-    <div class="note-modal-region" id="noteModalRegion"></div>
-    <textarea id="noteTextarea" placeholder="Type a note…"></textarea>
-    <div class="note-modal-actions">
-      <button class="note-btn cancel" onclick="closeNoteModal()">Cancel</button>
-      <button class="note-btn clear"  onclick="clearNote()">Clear</button>
-      <button class="note-btn save"   onclick="saveNote()">Save</button>
-    </div>
-  </div>
-</div>
-<!-- Mobile view -->
-<div class="mobile-wrap" id="mobileWrap">
-  <div class="mobile-hour-bar" id="mobileHourBar"></div>
-  <div class="mobile-list" id="mobileList"></div>
-</div>
-<!-- Data loading overlay -->
-<div class="data-loading-overlay hidden" id="dataLoadingOverlay">
-  <div class="data-loading-box">
-    <div class="data-loading-spinner"></div>
-    <div class="data-loading-title">Loading bulletin data…</div>
-    <div class="data-loading-sub">Fetching the latest states from the sheet.<br>This usually takes a few seconds.</div>
-    <div class="data-loading-refresh" id="dataLoadingRefresh">Taking too long? <a href="javascript:location.reload()" style="color:#1FD1BD;text-decoration:none;">Refresh the page</a></div>
-  </div>
-</div>
-</div><!-- /appShell -->
 
 <script>
-window.addEventListener('DOMContentLoaded', () => {
-  updateClock();
-  setInterval(updateClock, 1000);
-  document.addEventListener('click', closeCtx);
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeCtx(); closeNoteModal(); closeHelp(); }
-    if (e.key === 'Enter' && e.metaKey && document.getElementById('noteOverlay').classList.contains('show')) saveNote();
-  });
-});
-
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZwDASG4UAeC15TUj4KOfBnvsHSc2PWELBN4sicIbcKu0GUjSV0f_Qr4u2D3qFKGoo6A/exec';
 
+// ── HUB CONFIG ───────────────────────────
 const HUBS = {
   sw: {
     name: 'South & West Hub',
     regions: ['CWL','C&W','DEV','DOR','GLO','H&W','SOM','SWI','WST','WIL'],
-    full: {
-      'CWL':'Cornwall','C&W':'Coventry & Warwickshire','DEV':'Devon','DOR':'Dorset',
-      'GLO':'Gloucester','H&W':'Hereford & Worcester','SOM':'Somerset','SWI':'Swindon',
-      'WST':'The West','WIL':'Wiltshire'
-    },
+    full: { 'CWL':'Cornwall','C&W':'Coventry & Warwickshire','DEV':'Devon','DOR':'Dorset','GLO':'Gloucester','H&W':'Hereford & Worcester','SOM':'Somerset','SWI':'Swindon','WST':'The West','WIL':'Wiltshire' },
     nation: new Set(['CWL','DEV','DOR','SOM'])
   },
   se: {
     name: 'South & East Hub',
     regions: ['BRK','BBH','CAM','ESX','NHT','NFK','OXF','SUF','SUR','SUS'],
-    full: {
-      'BRK':'Berkshire','BBH':'Beds, Bucks & Herts','CAM':'Cambridgeshire',
-      'ESX':'Essex','NHT':'Northamptonshire','NFK':'Norfolk',
-      'OXF':'Oxfordshire','SUF':'Suffolk','SUR':'Surrey','SUS':'Sussex'
-    },
+    full: { 'BRK':'Berkshire','BBH':'Beds, Bucks & Herts','CAM':'Cambridgeshire','ESX':'Essex','NHT':'Northamptonshire','NFK':'Norfolk','OXF':'Oxfordshire','SUF':'Suffolk','SUR':'Surrey','SUS':'Sussex' },
     nation: new Set(['SUF','SUS'])
   },
   nm: {
     name: 'North & Midlands Hub',
     regions: ['BCS','CMB','EYRK','LAN','LIN','NYRK','PSR','S&C'],
-    full: {
-      'BCS':'Birmingham, Coventry & Solihull','CMB':'Cambridgeshire',
-      'EYRK':'East Yorkshire','LAN':'Lancashire','LIN':'Lincolnshire',
-      'NYRK':'North Yorkshire','PSR':'Peterborough','S&C':'Stoke & Cheshire'
-    },
+    full: { 'BCS':'Birmingham, Coventry & Solihull','CMB':'Cambridgeshire','EYRK':'East Yorkshire','LAN':'Lancashire','LIN':'Lincolnshire','NYRK':'North Yorkshire','PSR':'Peterborough','S&C':'Stoke & Cheshire' },
     nation: new Set(['EYRK'])
   }
 };
 
+const AM_SLOTS = ['0600','0700','0800','0900','1000','1100','1200','1300'];
+const PM_SLOTS = ['1400','1500','1600','1700','1800','1900'];
+const CYCLE = ['PENDING','READY','REDISPATCH','DISPATCHED','BREAKING'];
+const CLS   = {PENDING:'pending',READY:'ready',REDISPATCH:'redispatch',DISPATCHED:'dispatched',BREAKING:'breaking'};
+const LABEL = {PENDING:'Pending',READY:'Ready',REDISPATCH:'Redispatch',DISPATCHED:'Dispatched',BREAKING:'Breaking'};
+
+// ── STATE ────────────────────────────────
 let activeHub = null;
-let REGIONS = [];
-let REGION_FULL = {};
-let NATION_REGIONS = new Set();
+let REGIONS = [], REGION_FULL = {}, NATION_REGIONS = new Set();
+let shift = 'PM', mode = 'creation';
+let mobileMode = false, pickedView = 'desktop';
+let mobileSlot = null;
+let data = {}, prevData = {}, notes = {};
+let pendingCell = null, noteKey = null;
+let initialFetchDone = false;
+let pollTimer = null, loadingRetryTimer = null, loadingFallbackTimer = null;
 
-let pickedView = 'desktop'; // set by hub picker
+// pendingSaves: key -> {value, ts} — optimistic local state while save is in flight
+const pendingSaves = new Map();
+// saveQueues: key -> {next} — queues rapid clicks
+const saveQueues = {};
 
+// ── INIT ─────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  updateClock();
+  setInterval(updateClock, 1000);
+  document.addEventListener('click', () => closeCtx());
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeCtx(); closeNote(); closeHelp(); }
+    if (e.key === 'Enter' && e.metaKey && document.getElementById('noteOverlay').classList.contains('show')) saveNote();
+  });
+});
+
+// ── HUB SELECTION ────────────────────────
 function pickView(v) {
   pickedView = v;
-  const dBtn = document.getElementById('pickDesktop');
-  const mBtn = document.getElementById('pickMobile');
-  if (v === 'desktop') {
-    dBtn.style.background = '#4700A3'; dBtn.style.color = '#fff';
-    mBtn.style.background = 'none';    mBtn.style.color = 'rgba(255,255,255,0.4)';
-  } else {
-    mBtn.style.background = '#1FD1BD'; mBtn.style.color = '#000';
-    dBtn.style.background = 'none';    dBtn.style.color = 'rgba(255,255,255,0.4)';
-  }
+  document.getElementById('pickDesktop').className = 'pick-view-btn' + (v==='desktop' ? ' active-desktop' : '');
+  document.getElementById('pickMobile').className  = 'pick-view-btn' + (v==='mobile'  ? ' active-mobile'  : '');
 }
 
 function setHub(hubKey) {
   activeHub = hubKey;
   const hub = HUBS[hubKey];
-  REGIONS = hub.regions;
-  REGION_FULL = hub.full;
-  NATION_REGIONS = hub.nation;
+  REGIONS = hub.regions; REGION_FULL = hub.full; NATION_REGIONS = hub.nation;
   document.getElementById('hubName').textContent = hub.name;
   document.getElementById('hubPicker').style.display = 'none';
   document.getElementById('appShell').style.display = 'flex';
 
-  // Apply view choice from picker
   if (pickedView === 'mobile') {
     mobileMode = true;
     document.getElementById('mobileToggleBtn').classList.add('active');
     document.getElementById('gridWrap').style.display = 'none';
     document.getElementById('mobileWrap').classList.add('show');
-    document.querySelector('.topbar').classList.add('mobile-topbar');
+    document.getElementById('mainTopbar').classList.add('mobile-topbar');
   }
 
-  initialFetchDone = false; // reset so first fetch rebuilds grid with real data
-  buildGrid(); // build skeleton immediately (all pending) so screen isn't blank
-  showDataLoading();
-  fetchData(); // will rebuild again once data arrives
-  setInterval(fetchData, 3000);
-  initialiseCountdownMode();
+  // Show loading overlay
+  showLoading();
+  initialFetchDone = false;
+  data = {}; prevData = {}; notes = {};
+  pendingSaves.clear();
+
+  buildGrid();
+  fetchData();
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(fetchData, 3000);
 }
 
-function initialiseCountdownMode() {
-  if (!activeHub) return;
-  const cycle = getCycleInfo(new Date());
-  countdownMode = cycle ? cycle.phase : 'deadline';
-  updateClock();
+// ── SHIFT / MODE ─────────────────────────
+function cycleShift() { setShift(shift === 'AM' ? 'PM' : 'AM'); }
+function setShift(s) {
+  shift = s;
+  document.getElementById('shiftBtn').textContent = s;
+  buildGrid();
+  if (mobileMode) { buildMobileHourBar(); renderMobile(); }
+}
+function slots() { return shift === 'AM' ? AM_SLOTS : PM_SLOTS; }
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btnCreation').classList.toggle('active', m==='creation');
+  document.getElementById('btnDelivery').classList.toggle('active', m==='delivery');
 }
 
-const AM_SLOTS = ['0600','0700','0800','0900','1000','1100','1200','1300'];
-const PM_SLOTS = ['1400','1500','1600','1700','1800','1900'];
+// ── TOGGLE MOBILE ────────────────────────
+function toggleMobileView() {
+  mobileMode = !mobileMode;
+  document.getElementById('mobileToggleBtn').classList.toggle('active', mobileMode);
+  document.getElementById('gridWrap').style.display = mobileMode ? 'none' : 'flex';
+  document.getElementById('mobileWrap').classList.toggle('show', mobileMode);
+  document.getElementById('mainTopbar').classList.toggle('mobile-topbar', mobileMode);
+  if (mobileMode) { buildMobileHourBar(); renderMobile(); }
+}
 
-const CYCLE = ['PENDING','READY','REDISPATCH','DISPATCHED','BREAKING'];
-const CLS   = {PENDING:'pending',READY:'ready',REDISPATCH:'redispatch',DISPATCHED:'dispatched',BREAKING:'breaking'};
-const LABEL = {PENDING:'Pending',READY:'Ready',REDISPATCH:'Redispatch',DISPATCHED:'Dispatched',BREAKING:'Breaking'};
+// ── BUILD DESKTOP GRID ───────────────────
+function buildGrid() {
+  const wrap = document.getElementById('gridWrap');
+  wrap.innerHTML = '';
+  REGIONS.forEach(region => {
+    const row = document.createElement('div'); row.className = 'grid-row';
+    const lbl = document.createElement('div'); lbl.className = 'region-lbl';
+    lbl.textContent = region; lbl.title = REGION_FULL[region] || region;
+    if (NATION_REGIONS.has(region)) {
+      const nb = document.createElement('span'); nb.className = 'nation-badge'; nb.textContent = 'N'; lbl.appendChild(nb);
+    }
+    row.appendChild(lbl);
+    slots().forEach(slot => {
+      const key = activeHub + ':' + region + '|' + slot;
+      row.appendChild(makeCell(key, slot, region, slot));
+    });
+    wrap.appendChild(row);
+  });
+}
 
-let shift = 'PM';
-let mode  = 'creation'; // 'creation' | 'delivery'
-let data  = {};
-let prevData = {}; // tracks previous status before dispatch
-let notes = {}; // key -> note string
-let pendingCell = null;
-let noteTargetKey = null;
+function makeCell(key, timeLabel, region, slot) {
+  const raw = data[key] || 'PENDING';
+  const parts = raw.split(':'); const status = parts[0].toUpperCase(); const prev = parts[1] ? parts[1].toUpperCase() : null;
+  const cell = document.createElement('div');
+  cell.className = 'cell ' + (CLS[status]||'pending');
+  cell.dataset.key = key;
+  const stripe = document.createElement('div'); stripe.className = 'prev-stripe ' + (prev ? (CLS[prev]||'none') : 'none');
+  const curl = document.createElement('div'); curl.className = 'note-curl';
+  curl.style.display = notes[key] ? 'block' : 'none';
+  curl.addEventListener('click', e => { e.stopPropagation(); openNoteModal(key, region, slot); });
+  const t = document.createElement('div'); t.className = 'cell-time'; t.textContent = timeLabel;
+  const s = document.createElement('div'); s.className = 'cell-status'; s.textContent = LABEL[status]||status;
+  cell.appendChild(stripe); cell.appendChild(curl); cell.appendChild(t); cell.appendChild(s);
+  cell.addEventListener('click', e => { e.stopPropagation(); handleCellClick(key, region, slot); });
+  cell.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); openCtx(e, key, region, slot); });
+  return cell;
+}
 
-// Per-key save queue — ensures rapid clicks on same cell are serialised
-const saveQueues = {};
+function renderCells() {
+  document.querySelectorAll('.cell[data-key]').forEach(cell => {
+    const key = cell.dataset.key;
+    if (!key) return;
+    const slot = key.split('|')[1];
+    if (!slots().includes(slot)) return;
+    const raw = data[key] || 'PENDING';
+    const parts = raw.split(':'); const status = parts[0].toUpperCase(); const prev = parts[1] ? parts[1].toUpperCase() : null;
+    cell.className = 'cell ' + (CLS[status]||'pending');
+    cell.querySelector('.cell-status').textContent = LABEL[status]||status;
+    const stripe = cell.querySelector('.prev-stripe');
+    if (stripe) stripe.className = 'prev-stripe ' + (prev ? (CLS[prev]||'none') : 'none');
+  });
+  if (mobileMode) renderMobile();
+}
 
+// ── CELL INTERACTION ─────────────────────
+function handleCellClick(key, region, slot) {
+  if (mode === 'delivery') {
+    const cur = (data[key]||'PENDING').split(':')[0].toUpperCase();
+    if (cur !== 'DISPATCHED') applyStatus(key, 'DISPATCHED');
+  } else {
+    const cur = (data[key]||'PENDING').split(':')[0].toUpperCase();
+    const next = CYCLE[(CYCLE.indexOf(cur)+1) % CYCLE.length];
+    applyStatus(key, next);
+  }
+}
 
+function applyStatus(key, status) {
+  const prev = (data[key]||'PENDING').split(':')[0].toUpperCase();
+  let stored = status;
+  let stripeClass = 'none';
+  if (status === 'DISPATCHED' && prev !== 'DISPATCHED') {
+    stored = 'DISPATCHED:' + prev;
+    stripeClass = CLS[prev] || 'none';
+  } else if (status === 'DISPATCHED' && prev === 'DISPATCHED') {
+    stored = data[key]; // keep existing stripe
+    stripeClass = CLS[(data[key]||'').split(':')[1]] || 'none';
+  }
+  data[key] = stored;
+  pendingSaves.set(key, { value: stored, ts: Date.now() });
 
+  // Update DOM immediately
+  const cell = document.querySelector('[data-key="' + key + '"]');
+  if (cell) {
+    cell.className = 'cell ' + (CLS[status]||'pending');
+    cell.querySelector('.cell-status').textContent = LABEL[status]||status;
+    const stripe = cell.querySelector('.prev-stripe');
+    if (stripe) stripe.className = 'prev-stripe ' + stripeClass;
+  }
+  if (mobileMode) renderMobile();
+  pushSave(key, stored);
+}
 
-let countdownMode = 'booth'; // auto-managed by getCycleInfo
+// ── RESET ────────────────────────────────
+function confirmReset() {
+  const hubName = activeHub ? HUBS[activeHub].name : 'this hub';
+  if (!confirm('Reset ALL ' + shift + ' bulletins to PENDING for ' + hubName + '?')) return;
+  slots().forEach(slot => REGIONS.forEach(region => {
+    const key = activeHub + ':' + region + '|' + slot;
+    data[key] = 'PENDING'; notes[key] = ''; prevData[key] = 'none';
+    pendingSaves.set(key, { value: 'PENDING', ts: Date.now() });
+  }));
+  document.querySelectorAll('.note-curl').forEach(c => c.style.display = 'none');
+  renderCells();
+  // Batch reset to sheet
+  const batch = {};
+  slots().forEach(slot => REGIONS.forEach(region => { batch[activeHub+':'+region+'|'+slot] = 'PENDING'; }));
+  fetch(SCRIPT_URL + '?action=batchset&data=' + encodeURIComponent(JSON.stringify(batch)), {cache:'no-store'})
+    .then(r => r.json()).then(j => { if(j.ok) { setSync('ok','Reset done'); setTimeout(()=>pendingSaves.clear(),5000); } else setSync('error','Reset failed'); })
+    .catch(() => setSync('error','Reset failed'));
+}
 
-// Returns the current cycle info:
-// - Find next :50 deadline that hasn't passed
-// - Bulletin slot = slot at that deadline hour
-// - Phase: 'booth' (counting to booth entry) or 'deadline' (counting to :50)
+// ── CONTEXT MENU ─────────────────────────
+function openCtx(e, key, region, slot) {
+  pendingCell = { key, region, slot };
+  const menu = document.getElementById('ctx');
+  document.getElementById('ctxTitle').textContent = (REGION_FULL[region]||region) + ' · ' + slot;
+  menu.classList.add('show');
+  const x = Math.min(e.clientX, window.innerWidth-210);
+  const y = Math.min(e.clientY, window.innerHeight-280);
+  menu.style.left = x+'px'; menu.style.top = y+'px';
+}
+function closeCtx() { document.getElementById('ctx').classList.remove('show'); pendingCell = null; }
+function setStatus(status) { if (pendingCell) { applyStatus(pendingCell.key, status); closeCtx(); } }
+function openNoteFromCtx() { if (pendingCell) { const {key,region,slot}=pendingCell; closeCtx(); openNoteModal(key,region,slot); } }
+
+// ── NOTES ────────────────────────────────
+function openNoteModal(key, region, slot) {
+  noteKey = key;
+  document.getElementById('noteRegion').textContent = (REGION_FULL[region]||region) + ' · ' + slot;
+  document.getElementById('noteText').value = notes[key] || '';
+  document.getElementById('noteOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('noteText').focus(), 50);
+}
+function closeNote() { document.getElementById('noteOverlay').classList.remove('show'); noteKey = null; }
+function saveNote() {
+  if (!noteKey) return;
+  notes[noteKey] = document.getElementById('noteText').value.trim();
+  const cell = document.querySelector('[data-key="'+noteKey+'"]');
+  if (cell) { const curl = cell.querySelector('.note-curl'); if(curl) curl.style.display = notes[noteKey] ? 'block' : 'none'; }
+  closeNote();
+  if (mobileMode) renderMobile();
+}
+function clearNote() { if (noteKey) { notes[noteKey] = ''; document.getElementById('noteText').value = ''; saveNote(); } }
+
+// ── HELP ─────────────────────────────────
+function openHelp() { document.getElementById('helpOverlay').classList.add('show'); }
+function closeHelp() { document.getElementById('helpOverlay').classList.remove('show'); }
+
+// ── LOADING OVERLAY ───────────────────────
+function showLoading() {
+  const o = document.getElementById('loadingOverlay');
+  const r = document.getElementById('loadingRetry');
+  o.style.display = 'flex'; o.classList.remove('hidden');
+  r.classList.remove('show');
+  loadingRetryTimer   = setTimeout(() => r.classList.add('show'), 5000);
+  loadingFallbackTimer = setTimeout(() => { if (!initialFetchDone) { initialFetchDone=true; hideLoading(); } }, 15000);
+}
+function hideLoading() {
+  const o = document.getElementById('loadingOverlay');
+  o.classList.add('hidden');
+  if (loadingRetryTimer)    { clearTimeout(loadingRetryTimer);    loadingRetryTimer = null; }
+  if (loadingFallbackTimer) { clearTimeout(loadingFallbackTimer); loadingFallbackTimer = null; }
+  setTimeout(() => { o.style.display = 'none'; }, 450);
+}
+
+// ── SYNC ─────────────────────────────────
+function setSync(state, label) {
+  const dot = document.getElementById('syncDot');
+  dot.className = 'sync-dot' + (state==='syncing' ? ' syncing' : state==='error' ? ' error' : '');
+  dot.title = label || '';
+}
+
+async function fetchData() {
+  try {
+    const res  = await fetch(SCRIPT_URL + '?action=get', {cache:'no-store'});
+    const json = await res.json();
+    const sheet = json.data || {};
+    // Merge: sheet wins unless we have a pending save for this key
+    Object.keys(sheet).forEach(k => {
+      if (pendingSaves.has(k)) {
+        const ps = pendingSaves.get(k);
+        // If sheet confirmed our value, or save is >12s old, accept sheet
+        if (sheet[k] === ps.value || Date.now() - ps.ts > 12000) {
+          pendingSaves.delete(k);
+          data[k] = sheet[k];
+        }
+        // else keep our local value
+      } else {
+        data[k] = sheet[k];
+      }
+    });
+    if (!initialFetchDone) {
+      initialFetchDone = true;
+      buildGrid();
+      hideLoading();
+      if (mobileMode) setTimeout(() => { buildMobileHourBar(); renderMobile(); }, 50);
+    } else {
+      renderCells();
+    }
+    const t = new Date();
+    setSync('ok', 'Synced ' + String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+':'+String(t.getSeconds()).padStart(2,'0'));
+  } catch(err) {
+    setSync('error','Sync failed');
+    if (!initialFetchDone) { initialFetchDone=true; hideLoading(); buildGrid(); }
+  }
+}
+
+function pushSave(key, value) {
+  if (saveQueues[key]) { saveQueues[key].next = value; return; }
+  saveQueues[key] = { next: null };
+  doSave(key, value);
+}
+
+async function doSave(key, value) {
+  setSync('syncing','Saving…');
+  try {
+    const url = SCRIPT_URL + '?action=set&key=' + encodeURIComponent(key) + '&status=' + encodeURIComponent(value);
+    const res  = await fetch(url, {cache:'no-store'});
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error||'Unknown');
+    setSync('ok','Saved');
+  } catch(err) {
+    setSync('error','Save failed');
+    pendingSaves.delete(key);
+  } finally {
+    const q = saveQueues[key]; delete saveQueues[key];
+    if (q && q.next !== null) pushSave(key, q.next);
+  }
+}
+
+// ── CLOCK + COUNTDOWN ────────────────────
 function getCycleInfo(now) {
-  const nowAbs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-
-  // Find next :50 deadline
+  const nowAbs = now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds();
   let deadlineH = now.getHours();
-  let deadlineAbs = deadlineH * 3600 + 50 * 60;
-  if (deadlineAbs <= nowAbs) {
-    deadlineH += 1;
-    deadlineAbs = deadlineH * 3600 + 50 * 60;
-  }
-
-  // Bulletin slot = the hour AFTER the deadline
-  // e.g. deadline at 09:50 means we're preparing the 10:00 bulletins
+  let deadlineAbs = deadlineH*3600 + 50*60;
+  if (deadlineAbs <= nowAbs) { deadlineH++; deadlineAbs = deadlineH*3600+50*60; }
   const bulletinH = deadlineH + 1;
   const bulletinSlot = String(bulletinH).padStart(2,'0') + '00';
-  if (![...AM_SLOTS, ...PM_SLOTS].includes(bulletinSlot)) return null; // end of broadcast day
-
-  // Count recording time for that slot
-  let totalSecs = 0;
-  let freshCount = 0;
+  if (![...AM_SLOTS,...PM_SLOTS].includes(bulletinSlot)) return null;
+  let totalSecs = 0, freshCount = 0;
   if (activeHub) {
     REGIONS.forEach(region => {
-      const key = activeHub + ':' + region + '|' + bulletinSlot;
-      const raw = (data[key] || 'PENDING');
-      const status = raw.split(':')[0].toUpperCase();
+      const key = activeHub+':'+region+'|'+bulletinSlot;
+      const status = (data[key]||'PENDING').split(':')[0].toUpperCase();
       if (['PENDING','READY','BREAKING'].includes(status)) { totalSecs += 120; freshCount++; }
-      else if (status === 'REDISPATCH') { totalSecs += 10; }
+      else if (status === 'REDISPATCH') totalSecs += 10;
     });
   }
-
   const boothAbs = deadlineAbs - totalSecs;
-  const secsToDeadline = deadlineAbs - nowAbs;
   const secsToBooth = boothAbs - nowAbs;
+  const secsToDeadline = deadlineAbs - nowAbs;
   const boothMinPastHour = Math.floor((boothAbs % 3600) / 60);
   const phase = secsToBooth > 0 ? 'booth' : 'deadline';
-
   return { bulletinSlot, deadlineH, secsToDeadline, secsToBooth, boothMinPastHour, freshCount, phase };
 }
-
-
-
-
 
 function updateClock() {
   const now = new Date();
   const h = String(now.getHours()).padStart(2,'0');
   const m = String(now.getMinutes()).padStart(2,'0');
   const s = now.getSeconds();
-  document.getElementById('clock').textContent = h + ':' + m + ':' + String(s).padStart(2,'0');
-
-  const el    = document.getElementById('countdown');
+  document.getElementById('clock').textContent = h+':'+m+':'+String(s).padStart(2,'0');
+  const el = document.getElementById('countdown');
   const label = document.getElementById('countdownLabel');
-
   const cycle = activeHub ? getCycleInfo(now) : null;
-
-  if (!cycle) {
-    el.textContent = '--:--';
-    label.textContent = 'Off air';
-    el.className = 'countdown-val ok';
-    return;
-  }
-
-  // Auto-switch based on cycle phase
-  countdownMode = cycle.phase;
-
-  if (countdownMode === 'booth') {
+  if (!cycle) { el.textContent='--:--'; label.textContent='Off air'; el.className='countdown-val ok'; return; }
+  if (cycle.phase === 'booth') {
     const secs = cycle.secsToBooth;
-    const mm = String(Math.floor(secs / 60));
-    const ss2 = String(secs % 60).padStart(2,'0');
-    el.textContent = mm + ':' + ss2;
-    const entryMin = Math.max(0, cycle.boothMinPastHour);
-    label.textContent = '▶ Booth (:' + String(entryMin).padStart(2,'0') + ', ' + cycle.freshCount + ' buls)';
-    el.className = 'countdown-val ' + (secs <= 120 ? 'booth-urgent' : secs <= 300 ? 'booth-soon' : 'booth');
+    el.textContent = Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0');
+    el.className = 'countdown-val '+(secs<=120?'booth-urgent':secs<=300?'booth-soon':'booth');
+    label.textContent = '\u25B6 Booth (:'+String(Math.max(0,cycle.boothMinPastHour)).padStart(2,'0')+', '+cycle.freshCount+' buls)';
   } else {
     const secs = cycle.secsToDeadline;
-    const mm = String(Math.floor(secs / 60));
-    const ss2 = String(secs % 60).padStart(2,'0');
-    el.textContent = mm + ':' + ss2;
+    el.textContent = Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0');
+    el.className = 'countdown-val '+(secs<=120?'urgent':secs<=300?'soon':'ok');
     label.textContent = 'Deadline :50';
-    el.className = 'countdown-val ' + (secs <= 120 ? 'urgent' : secs <= 300 ? 'soon' : 'ok');
   }
 }
 
-function setShift(s) {
-  shift = s;
-  const btn = document.getElementById('shiftBtn');
-  if (btn) btn.textContent = s;
-  buildGrid();
-  if (mobileMode) { buildMobileHourBar(); renderMobile(); }
-}
-
-function cycleShift() {
-  setShift(shift === 'AM' ? 'PM' : 'AM');
-}
-
-function slots() { return shift === 'AM' ? AM_SLOTS : PM_SLOTS; }
-
-function setMode(m) {
-  mode = m;
-  document.getElementById('btnCreation').classList.toggle('active', m === 'creation');
-  document.getElementById('btnDelivery').classList.toggle('active', m === 'delivery');
-}
-
-function buildGrid() {
-  const wrap = document.getElementById('gridWrap');
-  wrap.innerHTML = '';
-  REGIONS.forEach(region => {
-    const row = document.createElement('div');
-    row.className = 'grid-row';
-
-    const lbl = document.createElement('div');
-    lbl.className = 'region-lbl';
-    lbl.textContent = region;
-    lbl.title = REGION_FULL[region] || region;
-    if (NATION_REGIONS.has(region)) {
-      const nb = document.createElement('span');
-      nb.className = 'nation-badge';
-      nb.textContent = 'N';
-      lbl.appendChild(nb);
-    }
-    row.appendChild(lbl);
-
-    slots().forEach(slot => {
-      const key    = activeHub + ':' + region + '|' + slot;
-      const raw    = (data[key] || 'PENDING');
-      const parts  = raw.split(':');
-      const status = parts[0].toUpperCase();
-      const prev   = parts[1] ? parts[1].toUpperCase() : null;
-      const cell   = document.createElement('div');
-      cell.className = 'cell ' + (CLS[status] || 'pending');
-      cell.dataset.key = key;
-
-      const stripe = document.createElement('div'); stripe.className='prev-stripe ' + (prev ? (CLS[prev]||'none') : (prevData[key]||'none'));
-      const curl = document.createElement('div'); curl.className='note-curl'; curl.style.display = notes[key] ? 'block' : 'none';
-      curl.addEventListener('click', e => { e.stopPropagation(); openNoteModal(key, region, slot); });
-      const t = document.createElement('div'); t.className='cell-time';   t.textContent = slot;
-      const s = document.createElement('div'); s.className='cell-status'; s.textContent = LABEL[status]||status;
-      cell.appendChild(stripe); cell.appendChild(curl); cell.appendChild(t); cell.appendChild(s);
-
-      cell.addEventListener('click', e => {
-        e.stopPropagation();
-        if (mode === 'delivery') {
-          const raw = (data[key] || 'PENDING');
-          const cur = raw.split(':')[0].toUpperCase();
-          if (cur !== 'DISPATCHED') applyStatus(key, 'DISPATCHED', cell);
-        } else {
-          cycleStatus(key, cell);
-        }
-      });
-      cell.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); openCtx(e, key, region, slot); });
-      row.appendChild(cell);
-    });
-
-    wrap.appendChild(row);
-  });
-}
-
-function renderCells() {
-  document.querySelectorAll('.cell[data-key]').forEach(cell => {
-    const key  = cell.dataset.key;
-    const slot = key.split('|')[1];
-    if (!slots().includes(slot)) return;
-
-    const raw    = (data[key] || 'PENDING');
-    const parts  = raw.split(':');
-    const status = parts[0].toUpperCase();
-    const prev   = parts[1] ? parts[1].toUpperCase() : null;
-
-    cell.className = 'cell ' + (CLS[status] || 'pending');
-    cell.querySelector('.cell-status').textContent = LABEL[status] || status;
-
-    const stripe = cell.querySelector('.prev-stripe');
-    if (stripe) stripe.className = 'prev-stripe ' + (prev ? (CLS[prev] || 'none') : 'none');
-  });
-
-  // Always sync mobile view if active
-  if (mobileMode) renderMobile();
-}
-
-function cycleStatus(key, cell) {
-  const raw     = (data[key] || 'PENDING');
-  const current = raw.split(':')[0].toUpperCase();
-  const next    = CYCLE[(CYCLE.indexOf(current) + 1) % CYCLE.length];
-  applyStatus(key, next, cell);
-}
-
-function applyStatus(key, status, cell) {
-  // Work out raw stored value — may be 'DISPATCHED:READY' etc.
-  const rawCurrent = data[key] || 'PENDING';
-  const currentStatus = rawCurrent.split(':')[0].toUpperCase();
-
-  let storedValue = status; // what we write to sheet
-  let stripeClass = 'none';
-
-  if (status === 'DISPATCHED') {
-    // Encode previous state into stored value so other devices can read it
-    if (currentStatus !== 'DISPATCHED') {
-      storedValue = 'DISPATCHED:' + currentStatus;
-    } else {
-      // Already dispatched — preserve existing stripe
-      storedValue = rawCurrent;
-    }
-    stripeClass = CLS[storedValue.split(':')[1]] || 'none';
-  }
-
-  data[key] = storedValue;
-  prevData[key] = stripeClass;
-  pendingSaves.set(key, { value: storedValue, savedAt: Date.now() });s
-
-  if (!cell) cell = document.querySelector('[data-key="' + key + '"]');
-  if (cell) {
-    cell.className = 'cell dispatched';
-    if (status !== 'DISPATCHED') cell.className = 'cell ' + (CLS[status] || 'pending');
-    cell.querySelector('.cell-status').textContent = LABEL[status] || status;
-    const stripe = cell.querySelector('.prev-stripe');
-    if (stripe) stripe.className = 'prev-stripe ' + stripeClass;
-  }
-  pushUpdate(key, storedValue);
-}
-
-function openCtx(e, key, region, slot) {
-  pendingCell = { key };
-  const menu = document.getElementById('ctx');
-  document.getElementById('ctxTitle').textContent = region + ' · ' + slot;
-  menu.classList.add('show');
-  const x = Math.min(e.clientX, window.innerWidth  - 210);
-  const y = Math.min(e.clientY, window.innerHeight - 250);
-  menu.style.left = x + 'px';
-  menu.style.top  = y + 'px';
-}
-
-function closeCtx() {
-  document.getElementById('ctx').classList.remove('show');
-  pendingCell = null;
-}
-
-function setStatus(status) {
-  if (!pendingCell) return;
-  applyStatus(pendingCell.key, status);
-  closeCtx();
-}
-
-function confirmReset() {
-  const hubName = HUBS[activeHub] ? HUBS[activeHub].name : 'this hub';
-  if (!confirm('Reset ALL ' + shift + ' bulletins to PENDING for ' + hubName + ' and clear all notes?')) return;
-
-  // Only reset keys for the current hub + shift
-  slots().forEach(slot => REGIONS.forEach(region => {
-    const key = activeHub + ':' + region + '|' + slot;
-    data[key] = 'PENDING';
-    notes[key] = '';
-    prevData[key] = 'none';
-  }));
-
-  // Hide note curls only for current cells
-  document.querySelectorAll('.cell[data-key]').forEach(cell => {
-    const curl = cell.querySelector('.note-curl');
-    if (curl) curl.style.display = 'none';
-  });
-
-  renderCells();
-  pushReset();
-}
-
-function setSync(state, label) {
-  const dot = document.getElementById('syncDot');
-  dot.className = 'sync-dot' + (state==='syncing' ? ' syncing' : state==='error' ? ' error' : '');
-  dot.title = label;
-}
-
-// ── MOBILE VIEW ──────────────────────────────
-let mobileMode = false;
-let mobileSlot = null;
-
-function toggleMobileView() {
-  mobileMode = !mobileMode;
-  document.getElementById('mobileToggleBtn').classList.toggle('active', mobileMode);
-  document.getElementById('gridWrap').style.display = mobileMode ? 'none' : 'flex';
-  document.getElementById('mobileWrap').classList.toggle('show', mobileMode);
-  document.querySelector('.topbar').classList.toggle('mobile-topbar', mobileMode);
-  if (mobileMode) {
-    buildMobileHourBar();
-    renderMobile();
-  }
-}
-
+// ── MOBILE VIEW ──────────────────────────
 function buildMobileHourBar() {
-  const bar = document.getElementById('mobileHourBar');
-  bar.innerHTML = '';
+  const bar = document.getElementById('mobileHourBar'); bar.innerHTML = '';
   const s = slots();
-  // Default to current hour's slot or first
   if (!mobileSlot || !s.includes(mobileSlot)) {
-    const now = new Date();
-    const nowStr = String(now.getHours()).padStart(2,'0') + '00';
-    mobileSlot = s.includes(nowStr) ? nowStr : s[0];
+    const nowH = String(new Date().getHours()).padStart(2,'0')+'00';
+    mobileSlot = s.includes(nowH) ? nowH : s[0];
   }
   s.forEach(slot => {
-    const btn = document.createElement('button');
-    btn.className = 'mobile-hour-btn' + (slot === mobileSlot ? ' active' : '');
+    const btn = document.createElement('button'); btn.className = 'mobile-hour-btn'+(slot===mobileSlot?' active':'');
     btn.textContent = slot;
-    btn.onclick = () => {
-      mobileSlot = slot;
-      document.querySelectorAll('.mobile-hour-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderMobile();
-    };
+    btn.onclick = () => { mobileSlot=slot; document.querySelectorAll('.mobile-hour-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderMobile(); };
     bar.appendChild(btn);
   });
 }
 
 function renderMobile() {
-  if (!mobileMode || !mobileSlot) return;
-  const list = document.getElementById('mobileList');
-  list.innerHTML = '';
-
+  if (!mobileMode||!mobileSlot) return;
+  const list = document.getElementById('mobileList'); list.innerHTML = '';
   REGIONS.forEach(region => {
-    const key    = activeHub + ':' + region + '|' + mobileSlot;
-    const raw    = data[key] || 'PENDING';
-    const parts  = raw.split(':');
-    const status = parts[0].toUpperCase();
-    const prev   = parts[1] ? parts[1].toUpperCase() : null;
-
-    const row = document.createElement('div');
-    row.className = 'mobile-row';
-
-    // Label
-    const lbl = document.createElement('div');
-    lbl.className = 'mobile-lbl';
-    lbl.textContent = region;
-    lbl.title = REGION_FULL[region] || region;
-    if (NATION_REGIONS.has(region)) {
-      const nb = document.createElement('span');
-      nb.className = 'nation-badge';
-      nb.textContent = 'N';
-      lbl.appendChild(nb);
-    }
-
-    // Cell
-    const cell = document.createElement('div');
-    cell.className = 'mobile-cell ' + (CLS[status] || 'pending');
-    cell.dataset.key = key;
-    cell.dataset.mobile = '1';
-
-    const stripe = document.createElement('div');
-    stripe.className = 'prev-stripe ' + (prev ? (CLS[prev] || 'none') : 'none');
-
-    const curl = document.createElement('div');
-    curl.className = 'note-curl';
-    curl.style.display = notes[key] ? 'block' : 'none';
-    curl.addEventListener('click', e => { e.stopPropagation(); openNoteModal(key, region, mobileSlot); });
-
-    const statusEl = document.createElement('div');
-    statusEl.className = 'mobile-status';
-    statusEl.textContent = LABEL[status] || status;
-
-    const subEl = document.createElement('div');
-    subEl.className = 'mobile-sub';
-    subEl.textContent = REGION_FULL[region] || region;
-
-    cell.appendChild(stripe);
-    cell.appendChild(curl);
-    cell.appendChild(statusEl);
-    cell.appendChild(subEl);
-
-    cell.addEventListener('click', e => {
-      e.stopPropagation();
-      if (mode === 'delivery') {
-        const cur = (data[key] || 'PENDING').split(':')[0].toUpperCase();
-        if (cur !== 'DISPATCHED') applyStatus(key, 'DISPATCHED', null);
-      } else {
-        cycleStatus(key, null);
-      }
-      renderMobile();
-    });
-
-    cell.addEventListener('contextmenu', e => {
-      e.preventDefault(); e.stopPropagation();
-      openCtx(e, key, region, mobileSlot);
-    });
-
-    row.appendChild(lbl);
-    row.appendChild(cell);
-    list.appendChild(row);
+    const key = activeHub+':'+region+'|'+mobileSlot;
+    const raw = data[key]||'PENDING'; const parts=raw.split(':'); const status=parts[0].toUpperCase(); const prev=parts[1]?parts[1].toUpperCase():null;
+    const row = document.createElement('div'); row.className='mobile-row';
+    const lbl = document.createElement('div'); lbl.className='mobile-lbl'; lbl.textContent=region; lbl.title=REGION_FULL[region]||region;
+    if (NATION_REGIONS.has(region)) { const nb=document.createElement('span'); nb.className='nation-badge'; nb.textContent='N'; lbl.appendChild(nb); }
+    const cell = document.createElement('div'); cell.className='mobile-cell '+(CLS[status]||'pending'); cell.dataset.key=key; cell.dataset.mobile='1';
+    const stripe=document.createElement('div'); stripe.className='prev-stripe '+(prev?(CLS[prev]||'none'):'none');
+    const curl=document.createElement('div'); curl.className='note-curl'; curl.style.display=notes[key]?'block':'none';
+    curl.addEventListener('click',e=>{e.stopPropagation();openNoteModal(key,region,mobileSlot);});
+    const st=document.createElement('div'); st.className='mobile-status'; st.textContent=LABEL[status]||status;
+    const sub=document.createElement('div'); sub.className='mobile-sub'; sub.textContent=REGION_FULL[region]||region;
+    cell.appendChild(stripe); cell.appendChild(curl); cell.appendChild(st); cell.appendChild(sub);
+    cell.addEventListener('click',e=>{e.stopPropagation();handleCellClick(key,region,mobileSlot);renderMobile();});
+    cell.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();openCtx(e,key,region,mobileSlot);});
+    row.appendChild(lbl); row.appendChild(cell); list.appendChild(row);
   });
-}
-
-// ── DATA LOADING OVERLAY ─────────────────────
-let dataLoadingTimer = null;
-
-function showDataLoading() {
-  const overlay = document.getElementById('dataLoadingOverlay');
-  const refresh = document.getElementById('dataLoadingRefresh');
-  overlay.style.display = 'flex';
-  overlay.classList.remove('hidden');
-  refresh.classList.remove('show');
-  // Show refresh hint after 5s
-  dataLoadingTimer = setTimeout(() => refresh.classList.add('show'), 5000);
-  // Hard fallback: dismiss after 15s no matter what
-  setTimeout(() => {
-    if (!initialFetchDone) {
-      initialFetchDone = true;
-      hideDataLoading();
-      buildGrid();
-    }
-  }, 15000);
-}
-
-function hideDataLoading() {
-  const overlay = document.getElementById('dataLoadingOverlay');
-  overlay.classList.add('hidden');
-  if (dataLoadingTimer) { clearTimeout(dataLoadingTimer); dataLoadingTimer = null; }
-  // Remove from DOM after fade completes
-  setTimeout(() => { overlay.style.display = 'none'; }, 450);
-}
-
-// ── HELP MODAL ───────────────────────────────
-function openHelp() {
-  document.getElementById('helpOverlay').classList.add('show');
-}
-function closeHelp() {
-  document.getElementById('helpOverlay').classList.remove('show');
-}
-
-// ── NOTE FUNCTIONS ───────────────────────────
-function openNoteFromCtx() {
-  if (!pendingCell) return;
-  const { key, region, slot } = pendingCell;
-  closeCtx();
-  openNoteModal(key, region, slot);
-}
-
-function openNoteModal(key, region, slot) {
-  noteTargetKey = key;
-  document.getElementById('noteModalRegion').textContent = region + ' · ' + slot;
-  document.getElementById('noteTextarea').value = notes[key] || '';
-  document.getElementById('noteOverlay').classList.add('show');
-  setTimeout(() => document.getElementById('noteTextarea').focus(), 50);
-}
-
-function closeNoteModal() {
-  document.getElementById('noteOverlay').classList.remove('show');
-  noteTargetKey = null;
-}
-
-function saveNote() {
-  if (!noteTargetKey) return;
-  const text = document.getElementById('noteTextarea').value.trim();
-  notes[noteTargetKey] = text;
-  updateNoteCurl(noteTargetKey, !!text);
-  closeNoteModal();
-}
-
-function clearNote() {
-  if (!noteTargetKey) return;
-  notes[noteTargetKey] = '';
-  updateNoteCurl(noteTargetKey, false);
-  closeNoteModal();
-}
-
-function updateNoteCurl(key, hasNote) {
-  const cell = document.querySelector('[data-key="' + key + '"]');
-  if (!cell) return;
-  const curl = cell.querySelector('.note-curl');
-  if (curl) curl.style.display = hasNote ? 'block' : 'none';
-}
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    closeCtx();
-    closeNoteModal();
-    closeHelp();
-  }
-  if (e.key === 'Enter' && e.metaKey && document.getElementById('noteOverlay').classList.contains('show')) {
-    saveNote();
-  }
-});
-
-let initialFetchDone = false;
-
-async function fetchData() {
-  try {
-    const res  = await fetch(SCRIPT_URL + '?action=get', { cache:'no-store' });
-    const json = await res.json();
-    if (json.data) {
-      Object.keys(json.data).forEach(k => {
-        if (pendingSaves.has(k)) {
-          const ps = pendingSaves.get(k);
-          // If sheet now shows our saved value, confirm and unlock
-          if (json.data[k] === ps.value) {
-            pendingSaves.delete(k);
-            data[k] = json.data[k];
-          } else if (Date.now() - ps.savedAt > 12000) {
-            // Timed out — sheet wins
-            pendingSaves.delete(k);
-            data[k] = json.data[k];
-          }
-          // else: save still in flight, keep local value
-        } else {
-          data[k] = json.data[k];
-        }
-      });
-      // On first load, rebuild grid so cells are created with correct data
-      if (!initialFetchDone) {
-        initialFetchDone = true;
-        buildGrid();
-        hideDataLoading();
-        if (mobileMode) {
-          // Small defer so DOM is fully visible before rendering
-          setTimeout(() => { buildMobileHourBar(); renderMobile(); }, 50);
-        }
-      } else {
-        renderCells();
-      }
-      const t = new Date();
-      setSync('ok', String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+':'+String(t.getSeconds()).padStart(2,'0'));
-    }
-  } catch(err) { setSync('error','Sync failed'); }
-}
-
-// Queued save — if a save is already in flight for this key,
-// we just update the queued value; the in-flight save will
-// fire another request with the latest value when it lands.
-function pushUpdate(key, status) {
-  if (saveQueues[key]) {
-    // A save is already in flight — just update what we want to send next
-    saveQueues[key].next = status;
-    return;
-  }
-  saveQueues[key] = { next: null };
-  _doSave(key, status);
-}
-
-async function _doSave(key, status) {
-  setSync('syncing', 'Saving…');
-  try {
-    const url = SCRIPT_URL + '?action=set&key=' + encodeURIComponent(key) + '&status=' + encodeURIComponent(status);
-    const res  = await fetch(url, { cache: 'no-store' });
-    const json = await res.json();
-    if (!json.ok) throw new Error(json.error || 'Unknown error');
-    setSync('ok', 'Saved');
-    // Keep in pendingSaves so poll can confirm sheet matches before unlocking
-    if (pendingSaves.has(key)) {
-      pendingSaves.set(key, { value: pendingSaves.get(key).value, savedAt: Date.now() });
-    }
-  } catch(err) {
-    setSync('error', 'Save failed');
-    pendingSaves.delete(key); // on failure, sheet value wins immediately
-  } finally {
-    const queued = saveQueues[key];
-    delete saveQueues[key];
-    if (queued && queued.next !== null) {
-      pushUpdate(key, queued.next); // another change queued, send it
-    }
-  }
-}
-
-async function pushReset() {
-  setSync('syncing','Resetting…');
-
-  const keys = [];
-  slots().forEach(slot => REGIONS.forEach(region => {
-    keys.push(activeHub + ':' + region + '|' + slot);
-  }));
-
-  keys.forEach(k => pendingSaves.set(k, { value: 'PENDING', savedAt: Date.now() }));
-
-  const batch = {};
-  keys.forEach(k => { batch[k] = 'PENDING'; });
-
-  try {
-    const url = SCRIPT_URL + '?action=batchset&data=' + encodeURIComponent(JSON.stringify(batch));
-    const res  = await fetch(url, { cache: 'no-store' });
-    const json = await res.json();
-    if (json.ok) { setSync('ok','Reset done'); }
-    else { throw new Error(json.error || 'Unknown'); }
-    keys.forEach(k => pendingSaves.delete(k));
-  } catch(err) {
-    setSync('error','Reset failed');
-    keys.forEach(k => pendingSaves.delete(k));
-  }
 }
 </script>
 </body>
