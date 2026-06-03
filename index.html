@@ -1493,10 +1493,19 @@ let dataLoadingTimer = null;
 function showDataLoading() {
   const overlay = document.getElementById('dataLoadingOverlay');
   const refresh = document.getElementById('dataLoadingRefresh');
+  overlay.style.display = 'flex';
   overlay.classList.remove('hidden');
   refresh.classList.remove('show');
-  // Show refresh hint after 5 seconds
+  // Show refresh hint after 5s
   dataLoadingTimer = setTimeout(() => refresh.classList.add('show'), 5000);
+  // Hard fallback: dismiss after 15s no matter what
+  setTimeout(() => {
+    if (!initialFetchDone) {
+      initialFetchDone = true;
+      hideDataLoading();
+      buildGrid();
+    }
+  }, 15000);
 }
 
 function hideDataLoading() {
