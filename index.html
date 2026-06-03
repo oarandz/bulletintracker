@@ -755,8 +755,8 @@ body {
   </div>
   <div class="topbar-right">
     <div class="countdown-wrap">
-      <div class="countdown-label" id="countdownLabel" style="cursor:pointer;" onclick="toggleCountdownMode()" title="Click to switch mode">Next :50 in</div>
-      <div class="countdown-val ok" id="countdown" style="cursor:pointer;" onclick="toggleCountdownMode()">0:00</div>
+      <div class="countdown-label" id="countdownLabel">Next :50 in</div>
+      <div class="countdown-val ok" id="countdown">0:00</div>
     </div>
     <div class="clock" id="clock">00:00</div>
     <div class="sync-pill">
@@ -937,25 +937,9 @@ function setHub(hubKey) {
 }
 
 function initialiseCountdownMode() {
-  const now = new Date();
-  const secsIntoHour = now.getMinutes() * 60 + now.getSeconds();
-  const deadlineExpired = (50 * 60 - secsIntoHour) <= 0;
-
-  const boothInfo = getBoothCountdown(now);
-
-  if (!boothInfo) {
-    // No next slot (end of day) — show deadline
-    countdownMode = 'deadline';
-  } else if (!boothInfo.expired) {
-    // Booth entry hasn't happened yet — count down to it
-    countdownMode = 'booth';
-  } else if (!deadlineExpired) {
-    // Booth entry passed, deadline not yet — should be in booth recording
-    countdownMode = 'deadline';
-  } else {
-    // Both passed — counting down to next hour's booth
-    countdownMode = 'booth';
-  }
+  if (!activeHub) return;
+  const cycle = getCycleInfo(new Date());
+  countdownMode = cycle ? cycle.phase : 'deadline';
   updateClock();
 }
 
@@ -982,32 +966,96 @@ const saveQueues = {};
 // Other devices' changes come in freely via poll
 const dirtyKeys = new Set();
 
-window.addEventListener('DOMContentLoaded', () => {
-  updateClock();
-  setInterval(updateClock, 1000);
-  document.addEventListener('click', closeCtx);
-  document.addEventListener('keydown', e => { if(e.key==='Escape') closeCtx(); });
-});
+let countdownMode = 'booth'; // auto-managed by getCycleInfo
 
-let countdownMode = 'deadline'; // 'deadline' | 'booth'
+// Returns the current cycle info:
+// - Find next :50 deadline that hasn't passed
+// - Bulletin slot = slot at that deadline hour
+// - Phase: 'booth' (counting to booth entry) or 'deadline' (counting to :50)
+function getCycleInfo(now) {
+  const nowAbs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
 
-function toggleCountdownMode() {
-  countdownMode = countdownMode === 'deadline' ? 'booth' : 'deadline';
+  // Find next :50 deadline
+  let deadlineH = now.getHours();
+  let deadlineAbs = deadlineH * 3600 + 50 * 60;
+  if (deadlineAbs <= nowAbs) {
+    deadlineH += 1;
+    deadlineAbs = deadlineH * 3600 + 50 * 60;
+  }
+
+  // Bulletin slot = deadlineH:00 (e.g. deadline 16:50 -> bulletins for 1700)
+  const bulletinSlot = String(deadlineH).padStart(2,'0') + '00';
+  if (![...AM_SLOTS, ...PM_SLOTS].includes(bulletinSlot)) return null; // end of broadcast day
+
+  // Count recording time for that slot
+  let totalSecs = 0;
+  let freshCount = 0;
+  if (activeHub) {
+    REGIONS.forEach(region => {
+      const key = activeHub + ':' + region + '|' + bulletinSlot;
+      const raw = (data[key] || 'PENDING');
+      const status = raw.split(':')[0].toUpperCase();
+      if (['PENDING','READY','BREAKING'].includes(status)) { totalSecs += 120; freshCount++; }
+      else if (status === 'REDISPATCH') { totalSecs += 10; }
+    });
+  }
+
+  const boothAbs = deadlineAbs - totalSecs;
+  const secsToDeadline = deadlineAbs - nowAbs;
+  const secsToBooth = boothAbs - nowAbs;
+  const boothMinPastHour = Math.floor((boothAbs % 3600) / 60);
+  const phase = secsToBooth > 0 ? 'booth' : 'deadline';
+
+  return { bulletinSlot, deadlineH, secsToDeadline, secsToBooth, boothMinPastHour, freshCount, phase };
+}
+
+
+function initialiseCountdownMode() {
+  if (!activeHub) return;
+  const cycle = getCycleInfo(new Date());
+  countdownMode = cycle ? cycle.phase : 'deadline';
   updateClock();
 }
 
-function getNextSlot() {
-  // Find the next bulletin slot after the current time
-  const now = new Date();
-  const nowMins = now.getHours() * 60 + now.getMinutes();
-  const allSlots = [...AM_SLOTS, ...PM_SLOTS];
-  // Convert slot strings to minutes
-  for (const s of allSlots) {
-    const slotH = parseInt(s.slice(0, 2));
-    const slotMins = slotH * 60;
-    if (slotMins > nowMins) return s;
+// Returns the current cycle info:
+// - Find next :50 deadline that hasn't passed
+// - Bulletin slot = slot at that deadline hour
+// - Phase: 'booth' (counting to booth entry) or 'deadline' (counting to :50)
+function getCycleInfo(now) {
+  const nowAbs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+
+  // Find next :50 deadline
+  let deadlineH = now.getHours();
+  let deadlineAbs = deadlineH * 3600 + 50 * 60;
+  if (deadlineAbs <= nowAbs) {
+    deadlineH += 1;
+    deadlineAbs = deadlineH * 3600 + 50 * 60;
   }
-  return null;
+
+  // Bulletin slot = deadlineH:00 (e.g. deadline 16:50 -> bulletins for 1700)
+  const bulletinSlot = String(deadlineH).padStart(2,'0') + '00';
+  if (![...AM_SLOTS, ...PM_SLOTS].includes(bulletinSlot)) return null; // end of broadcast day
+
+  // Count recording time for that slot
+  let totalSecs = 0;
+  let freshCount = 0;
+  if (activeHub) {
+    REGIONS.forEach(region => {
+      const key = activeHub + ':' + region + '|' + bulletinSlot;
+      const raw = (data[key] || 'PENDING');
+      const status = raw.split(':')[0].toUpperCase();
+      if (['PENDING','READY','BREAKING'].includes(status)) { totalSecs += 120; freshCount++; }
+      else if (status === 'REDISPATCH') { totalSecs += 10; }
+    });
+  }
+
+  const boothAbs = deadlineAbs - totalSecs;
+  const secsToDeadline = deadlineAbs - nowAbs;
+  const secsToBooth = boothAbs - nowAbs;
+  const boothMinPastHour = Math.floor((boothAbs % 3600) / 60);
+  const phase = secsToBooth > 0 ? 'booth' : 'deadline';
+
+  return { bulletinSlot, deadlineH, secsToDeadline, secsToBooth, boothMinPastHour, freshCount, phase };
 }
 
 function getBoothCountdown(now) {
@@ -1525,25 +1573,22 @@ async function _doSave(key, status) {
 async function pushReset() {
   setSync('syncing','Resetting…');
 
-  // Send each key as individual set calls so the sheet only updates these keys
-  // and doesn't wipe unrelated hub/shift data
   const keys = [];
   slots().forEach(slot => REGIONS.forEach(region => {
     keys.push(activeHub + ':' + region + '|' + slot);
   }));
 
-  // Mark all keys dirty immediately so poll doesn't overwrite during reset
   keys.forEach(k => dirtyKeys.add(k));
 
-  try {
-    // Send all resets in parallel
-    const fetches = keys.map(k =>
-      fetch(SCRIPT_URL + '?action=set&key=' + encodeURIComponent(k) + '&status=PENDING', { cache:'no-store' })
-    );
-    await Promise.all(fetches);
-    setSync('ok','Reset done');
+  const batch = {};
+  keys.forEach(k => { batch[k] = 'PENDING'; });
 
-    // Release dirty — saves confirmed, poll can now read fresh values
+  try {
+    const url = SCRIPT_URL + '?action=batchset&data=' + encodeURIComponent(JSON.stringify(batch));
+    const res  = await fetch(url, { cache: 'no-store' });
+    const json = await res.json();
+    if (json.ok) { setSync('ok','Reset done'); }
+    else { throw new Error(json.error || 'Unknown'); }
     keys.forEach(k => dirtyKeys.delete(k));
   } catch(err) {
     setSync('error','Reset failed');
