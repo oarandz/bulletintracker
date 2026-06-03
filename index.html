@@ -1045,10 +1045,7 @@ let noteTargetKey = null;
 // Per-key save queue — ensures rapid clicks on same cell are serialised
 const saveQueues = {};
 
-// dirtyKeys: key -> expiry timestamp
-// A key is only protected for the duration of its own save request + a small buffer
-// Once expired the sheet value always wins — guarantees convergence across devices
-const dirtyKeys = new Map();
+
 
 
 let countdownMode = 'booth'; // auto-managed by getCycleInfo
@@ -1097,51 +1094,7 @@ function getCycleInfo(now) {
 }
 
 
-function initialiseCountdownMode() {
-  if (!activeHub) return;
-  const cycle = getCycleInfo(new Date());
-  countdownMode = cycle ? cycle.phase : 'deadline';
-  updateClock();
-}
 
-function getCycleInfo(now) {
-  const nowAbs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-
-  // Find next :50 deadline
-  let deadlineH = now.getHours();
-  let deadlineAbs = deadlineH * 3600 + 50 * 60;
-  if (deadlineAbs <= nowAbs) {
-    deadlineH += 1;
-    deadlineAbs = deadlineH * 3600 + 50 * 60;
-  }
-
-  // Bulletin slot = the hour AFTER the deadline
-  // e.g. deadline at 09:50 means we're preparing the 10:00 bulletins
-  const bulletinH = deadlineH + 1;
-  const bulletinSlot = String(bulletinH).padStart(2,'0') + '00';
-  if (![...AM_SLOTS, ...PM_SLOTS].includes(bulletinSlot)) return null; // end of broadcast day
-
-  // Count recording time for that slot
-  let totalSecs = 0;
-  let freshCount = 0;
-  if (activeHub) {
-    REGIONS.forEach(region => {
-      const key = activeHub + ':' + region + '|' + bulletinSlot;
-      const raw = (data[key] || 'PENDING');
-      const status = raw.split(':')[0].toUpperCase();
-      if (['PENDING','READY','BREAKING'].includes(status)) { totalSecs += 120; freshCount++; }
-      else if (status === 'REDISPATCH') { totalSecs += 10; }
-    });
-  }
-
-  const boothAbs = deadlineAbs - totalSecs;
-  const secsToDeadline = deadlineAbs - nowAbs;
-  const secsToBooth = boothAbs - nowAbs;
-  const boothMinPastHour = Math.floor((boothAbs % 3600) / 60);
-  const phase = secsToBooth > 0 ? 'booth' : 'deadline';
-
-  return { bulletinSlot, deadlineH, secsToDeadline, secsToBooth, boothMinPastHour, freshCount, phase };
-}
 
 
 function updateClock() {
